@@ -1,0 +1,18 @@
+{
+  "round": 1,
+  "toMove": 0,
+  "nextFirst": 0,
+  "tokenInCenter": true,
+  "factories": [
+    ["blue", "blue", "red", "white"],
+    ["yellow", "yellow", "yellow", "black"],
+    ["red", "red", "red", "red"],
+    ["blue", "yellow", "black", "white"],
+    ["black", "black", "white", "white"]
+  ],
+  "center": [],
+  "players": [
+    {"score": 0, "wall": [".....", ".....", ".....", ".....", "....."], "lines": [{}, {}, {}, {}, {}], "floor": 0},
+    {"score": 0, "wall": [".....", ".....", ".....", ".....", "....."], "lines": [{}, {}, {}, {}, {}], "floor": 0}
+  ]
+}

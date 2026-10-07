@@ -1,0 +1,17 @@
+{
+  "lineFill": 60,
+  "lineBase": -151,
+  "adjacency": -34,
+  "row4": 50,
+  "col3": -6,
+  "col4": -32,
+  "color3": 19,
+  "color4": 55,
+  "token": 91,
+  "overflow": -90,
+  "endLead": -6,
+  "lineMissing": -23,
+  "wallPotential": 36,
+  "tempo": -2,
+  "completable": 17
+}

@@ -1,0 +1,37 @@
+name: Release
+
+# Pushing a tag like v0.1.0 builds the binaries and publishes a release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: |
+          mkdir dist
+          build() {
+            GOOS=$1 GOARCH=$2 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "dist/$3" ./cmd/azul
+          }
+          build windows amd64 azul-windows-amd64.exe
+          build linux   amd64 azul-linux-amd64
+          build linux   arm64 azul-linux-arm64
+          build darwin  arm64 azul-macos-arm64
+          build darwin  amd64 azul-macos-amd64
+          cd dist && sha256sum * > SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" dist/* --title "$TAG" --generate-notes

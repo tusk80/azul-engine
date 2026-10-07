@@ -1,0 +1,28 @@
+{
+  "round": 3,
+  "toMove": 0,
+  "nextFirst": 1,
+  "tokenInCenter": false,
+  "factories": [
+    [],
+    ["red", "red", "black", "white"],
+    [],
+    ["blue", "yellow", "yellow", "white"],
+    []
+  ],
+  "center": ["blue", "blue", "black", "black", "black", "white"],
+  "players": [
+    {
+      "score": 9,
+      "wall": ["B.R..", ".B...", "..B..", ".....", "....."],
+      "lines": [{}, {"color": "yellow", "count": 1}, {}, {"color": "black", "count": 2}, {}],
+      "floor": 0
+    },
+    {
+      "score": 8,
+      "wall": ["..R..", "..Y..", "K....", ".....", "....."],
+      "lines": [{"color": "blue", "count": 1}, {}, {"color": "white", "count": 2}, {}, {"color": "red", "count": 3}],
+      "floor": 1
+    }
+  ]
+}
