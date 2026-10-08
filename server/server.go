@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"runtime/debug"
 	"slices"
-	"strings"
 	"time"
 
+	"github.com/tusk80/azul-engine/api"
 	"github.com/tusk80/azul-engine/eval"
-	"github.com/tusk80/azul-engine/game"
 	"github.com/tusk80/azul-engine/search"
 )
 
@@ -98,10 +96,10 @@ func New(cfg Config) *Server {
 	// The page reads its limits from here, so it only offers search times
 	// this server will actually honour.
 	s.mux.HandleFunc("GET /config", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{
-			"defaultTimeMs": cfg.MoveTime.Milliseconds(),
-			"maxTimeMs":     cfg.MaxMoveTime.Milliseconds(),
-			"version":       Version(),
+		writeJSON(w, http.StatusOK, api.Config{
+			DefaultTimeMs: cfg.MoveTime.Milliseconds(),
+			MaxTimeMs:     cfg.MaxMoveTime.Milliseconds(),
+			Version:       api.Version(),
 		})
 	})
 	ui := uiHandler()
@@ -111,31 +109,6 @@ func New(cfg Config) *Server {
 		ui.ServeHTTP(w, r)
 	})
 	return s
-}
-
-// Version is the short git revision the binary was built from, or "dev".
-func Version() string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "dev"
-	}
-	rev, dirty := "", false
-	for _, kv := range info.Settings {
-		switch kv.Key {
-		case "vcs.revision":
-			rev = kv.Value
-		case "vcs.modified":
-			dirty = kv.Value == "true"
-		}
-	}
-	if rev == "" {
-		return "dev"
-	}
-	rev = rev[:min(len(rev), 7)]
-	if dirty {
-		rev += "+"
-	}
-	return rev
 }
 
 // statusWriter records the response status for the request log.
@@ -213,70 +186,18 @@ func (s *Server) acquire(ctx context.Context) *search.Searcher {
 	return nil
 }
 
-type bestMoveRequest struct {
-	State   json.RawMessage `json:"state"`
-	TimeMs  int             `json:"timeMs"`  // 0 = server default
-	Depth   int             `json:"depth"`   // 0 = no limit
-	MultiPV int             `json:"multiPV"` // 0 = 3
-}
-
-type effectJSON struct {
-	Tiles        int  `json:"tiles"`
-	Placed       int  `json:"placed"`
-	ToFloor      int  `json:"toFloor"`
-	Token        bool `json:"token"`
-	CompleteLine bool `json:"completeLine"`
-	WallPoints   int  `json:"wallPoints"`
-	FloorDelta   int  `json:"floorDelta"`
-	Bonus        int  `json:"bonus"`
-}
-
-type moveJSON struct {
-	Text    string     `json:"text"`              // "F2 black->1"
-	Source  string     `json:"source"`            // "factory" or "center"
-	Factory int        `json:"factory,omitempty"` // 1-5
-	Color   string     `json:"color"`
-	Line    int        `json:"line,omitempty"` // 1-5; absent for floor
-	Floor   bool       `json:"floor"`
-	Effect  effectJSON `json:"effect"`
-}
-
-type lineJSON struct {
-	Move     moveJSON `json:"move"`
-	Eval     float64  `json:"eval"`              // points for the side to move
-	Outcome  string   `json:"outcome,omitempty"` // "win" or "loss" when the game is decided
-	EvalText string   `json:"evalText"`
-	PV       []string `json:"pv"`
-}
-
-type bestMoveResponse struct {
-	lineJSON
-	Reason string     `json:"reason"`
-	Lines  []lineJSON `json:"lines"`
-	Depth  int        `json:"depth"`
-	Exact  bool       `json:"exact"`
-	Nodes  uint64     `json:"nodes"`
-	TimeMs int64      `json:"timeMs"`
-}
-
 func (s *Server) handleBestMove(w http.ResponseWriter, r *http.Request) {
-	var req bestMoveRequest
+	var req api.BestMoveRequest
 	if !decode(w, r, &req) {
 		return
 	}
-	st, err := parseState(req.State)
+	st, err := api.ParseState(req.State)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err)
+		writeAPIError(w, err)
 		return
 	}
-	opt := search.Options{Ctx: r.Context(), MoveTime: s.cfg.MoveTime, MaxDepth: req.Depth, MultiPV: 3}
-	if req.TimeMs > 0 {
-		opt.MoveTime = time.Duration(req.TimeMs) * time.Millisecond
-	}
-	opt.MoveTime = min(opt.MoveTime, s.cfg.MaxMoveTime)
-	if req.MultiPV > 0 {
-		opt.MultiPV = min(req.MultiPV, 8)
-	}
+	opt := req.Options(s.cfg.MoveTime, s.cfg.MaxMoveTime)
+	opt.Ctx = r.Context()
 
 	if !s.searches.allow(clientIP(r, s.cfg.ClientIPHeader), time.Now()) {
 		tooMany(w)
@@ -288,110 +209,44 @@ func (s *Server) handleBestMove(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errors.New("the engine is busy: try again in a moment"))
 		return
 	}
-	res := eng.Search(&st, opt)
+	resp, err := api.BestMove(eng, &st, opt)
 	s.engines <- eng
 	if r.Context().Err() != nil {
 		return // the client left; nobody to answer
 	}
-
-	if len(res.Lines) == 0 {
-		writeError(w, http.StatusUnprocessableEntity, errors.New("no legal moves: the round or game is over"))
+	if err != nil {
+		writeAPIError(w, err)
 		return
 	}
-	resp := bestMoveResponse{
-		Depth: res.Depth, Exact: res.Exact, Nodes: res.Nodes, TimeMs: res.Elapsed.Milliseconds(),
-	}
-	for _, l := range res.Lines {
-		resp.Lines = append(resp.Lines, toLineJSON(&st, l))
-	}
-	resp.lineJSON = resp.Lines[0]
-	resp.Reason = Reason(&st, res.Lines[0])
 	writeJSON(w, http.StatusOK, resp)
 }
 
-func toLineJSON(st *game.State, l search.Line) lineJSON {
-	out := lineJSON{Move: toMoveJSON(st, l.Move), EvalText: eval.Format(l.Score)}
-	v := l.Score
-	switch {
-	case v > eval.Win/2:
-		out.Outcome, v = "win", v-eval.Win
-	case v < -eval.Win/2:
-		out.Outcome, v = "loss", v+eval.Win
+// handleApply validates a position (with no moves) or plays a line from it.
+func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
+	var req api.ApplyRequest
+	if !decode(w, r, &req) {
+		return
 	}
-	out.Eval = float64(v) / eval.Scale
-	for _, m := range l.PV {
-		out.PV = append(out.PV, m.String())
+	resp, err := api.Apply(req)
+	if err != nil {
+		writeAPIError(w, err)
+		return
 	}
-	return out
+	writeJSON(w, http.StatusOK, resp)
 }
 
-func toMoveJSON(st *game.State, m game.Move) moveJSON {
-	e := st.MoveEffect(m)
-	out := moveJSON{
-		Text:  m.String(),
-		Color: m.Color().String(),
-		Effect: effectJSON{
-			Tiles: e.Tiles, Placed: e.Placed, ToFloor: e.ToFloor, Token: e.Token,
-			CompleteLine: e.CompleteLine, WallPoints: e.WallPoints, FloorDelta: e.FloorDelta, Bonus: e.Bonus,
-		},
+// handleNew deals a fresh game.
+func (s *Server) handleNew(w http.ResponseWriter, r *http.Request) {
+	var req api.NewRequest
+	if !decode(w, r, &req) {
+		return
 	}
-	if m.Src() == game.SrcCenter {
-		out.Source = "center"
-	} else {
-		out.Source, out.Factory = "factory", m.Src()+1
+	pos, err := api.NewGame(req)
+	if err != nil {
+		writeAPIError(w, err)
+		return
 	}
-	if m.Dst() == game.DstFloor {
-		out.Floor = true
-	} else {
-		out.Line = m.Dst() + 1
-	}
-	return out
-}
-
-// Reason is a one-line explanation of the best move: what it does now, and
-// what the principal variation costs the opponent in floor tiles.
-func Reason(st *game.State, l search.Line) string {
-	m := l.Move
-	e := st.MoveEffect(m)
-	var parts []string
-	switch {
-	case e.CompleteLine:
-		p := fmt.Sprintf("completes line %d (+%d", m.Dst()+1, e.WallPoints)
-		if e.Bonus > 0 {
-			p += fmt.Sprintf(", bonus +%d", e.Bonus)
-		}
-		parts = append(parts, p+")")
-	case e.Placed > 0:
-		parts = append(parts, fmt.Sprintf("builds line %d", m.Dst()+1))
-	}
-	var floor []string
-	if e.ToFloor > 0 {
-		floor = append(floor, fmt.Sprintf("%d to floor", e.ToFloor))
-	}
-	if e.Token {
-		floor = append(floor, "takes first player")
-	}
-	if len(floor) > 0 {
-		parts = append(parts, fmt.Sprintf("%s (%d)", strings.Join(floor, " and "), e.FloorDelta))
-	}
-
-	// Walk the PV and count the opponent's forced floor tiles.
-	c := *st
-	me := c.ToMove
-	oppFloor := 0
-	for _, pm := range l.PV {
-		if c.ToMove != me {
-			oppFloor += c.MoveEffect(pm).ToFloor
-		}
-		c.Apply(pm)
-	}
-	if oppFloor > 0 {
-		parts = append(parts, fmt.Sprintf("main line: opponent drops %d on the floor", oppFloor))
-	}
-	if len(parts) == 0 {
-		parts = append(parts, "best by search")
-	}
-	return strings.Join(parts, ", ") + "; eval " + eval.Format(l.Score)
+	writeJSON(w, http.StatusOK, pos)
 }
 
 func decode(w http.ResponseWriter, r *http.Request, v any) bool {
@@ -400,17 +255,6 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 		return false
 	}
 	return true
-}
-
-func parseState(raw json.RawMessage) (game.State, error) {
-	var st game.State
-	if len(raw) == 0 {
-		return st, errors.New(`request: missing "state"`)
-	}
-	if err := json.Unmarshal(raw, &st); err != nil {
-		return st, fmt.Errorf("state: %w", err)
-	}
-	return st, nil
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -423,4 +267,14 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 
 func writeError(w http.ResponseWriter, code int, err error) {
 	writeJSON(w, code, map[string]string{"error": err.Error()})
+}
+
+// writeAPIError answers with the status an api.Error carries.
+func writeAPIError(w http.ResponseWriter, err error) {
+	code := http.StatusInternalServerError
+	var ae *api.Error
+	if errors.As(err, &ae) {
+		code = ae.Status
+	}
+	writeError(w, code, err)
 }

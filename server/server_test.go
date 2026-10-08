@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tusk80/azul-engine/api"
 	"github.com/tusk80/azul-engine/game"
 )
 
@@ -33,7 +34,7 @@ func TestBestMove(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", rec.Code, rec.Body)
 	}
-	var resp bestMoveResponse
+	var resp api.BestMoveResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +88,7 @@ func TestApplyPlaysAWholeRound(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("/new: %d %s", rec.Code, rec.Body)
 	}
-	var start positionJSON
+	var start api.Position
 	if err := json.Unmarshal(rec.Body.Bytes(), &start); err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestApplyPlaysAWholeRound(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("/apply: %d %s", rec.Code, rec.Body)
 	}
-	var resp applyResponse
+	var resp api.ApplyResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
