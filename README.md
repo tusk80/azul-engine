@@ -14,6 +14,8 @@ web page together), or entirely in the browser as WebAssembly, with no server.
 - **Browser overlay**: a userscript that shows the suggested move on
   buddyboardgames.com.
 
+**Try it: https://azul.yesil.cc** (runs in your browser, nothing to install)
+
 ![The analysis board showing a solved mid-round position](docs/screenshot.png)
 
 Unofficial fan project. Azul is a trademark of its publishers; this project is
