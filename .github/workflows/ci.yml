@@ -24,3 +24,5 @@ jobs:
         run: go test ./...
       - name: Build
         run: CGO_ENABLED=0 go build -trimpath -o azul ./cmd/azul
+      - name: Build site (WebAssembly)
+        run: bash scripts/build-site.sh site

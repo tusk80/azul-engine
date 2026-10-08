@@ -3,7 +3,8 @@
 [![CI](https://github.com/tusk80/azul-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/tusk80/azul-engine/actions/workflows/ci.yml)
 
 An engine and analysis board for 2-player Azul (standard wall), written in Go.
-One binary contains the rules, the search, the HTTP API and the web page.
+It runs two ways from the same code: as one native binary (engine, HTTP API and
+web page together), or entirely in the browser as WebAssembly, with no server.
 
 - **Engine**: alpha-beta search that solves the rest of a round exactly when it
   can, with an evaluation tuned by self-play.
@@ -48,10 +49,21 @@ go build -o azul ./cmd/azul
 
 ## Hosting it
 
-`azul serve -public` adds the limits a public site needs: a 2-second cap per
-search, several engines, per-visitor rate limits and same-origin-only API
-access. See [docs/DEPLOY.md](docs/DEPLOY.md) for systemd, Caddy, Cloudflare
-and Docker.
+**As a static site (no server).** The engine compiles to WebAssembly and runs in
+each visitor's browser, so any static host works:
+
+```bash
+bash scripts/build-site.sh    # writes site/
+```
+
+The `Site` workflow does this on every push and publishes the result to the
+`pages` branch, ready for Cloudflare Pages or GitHub Pages to serve as-is. In
+the browser the engine searches about a third as fast as the native binary.
+
+**As a server.** `azul serve -public` adds the limits a public server needs: a
+2-second cap per search, several engines, per-visitor rate limits and
+same-origin-only API access. See [docs/DEPLOY.md](docs/DEPLOY.md) for systemd,
+Caddy, Cloudflare and Docker.
 
 ## Browser overlay (buddyboardgames.com)
 
@@ -103,6 +115,8 @@ the number of occupied floor slots including the first-player token. `bag` and
 
 ## How strong is it?
 
+For the ideas behind it, see [How the engine works](docs/HOW-IT-WORKS.md).
+
 Measured in self-play, each deal played twice with seats swapped:
 
 | Evaluation | Result |
@@ -127,11 +141,14 @@ of the next round beyond its evaluation: an experimental sampling lookahead
 
 ```
 game/        rules, move generation, scoring, hashing, JSON, ASCII board
+api/         requests and responses, shared by the server and the browser build
 search/      alpha-beta (PVS), iterative deepening, transposition table
 eval/        evaluation terms and weights
 selfplay/    parallel matches and SPSA tuning
 server/      HTTP API, limits, and the analysis board (server/ui, embedded)
 cmd/azul/    CLI
+cmd/wasm/    the engine for the browser (WebAssembly)
+scripts/     build-site.sh: the static site
 userscript/  Tampermonkey overlay for buddyboardgames.com
 deploy/      systemd unit and Caddyfile
 ```
