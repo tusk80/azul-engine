@@ -57,8 +57,11 @@ bash scripts/build-site.sh    # writes site/
 ```
 
 The `Site` workflow does this on every push and publishes the result to the
-`pages` branch, ready for Cloudflare Pages or GitHub Pages to serve as-is. In
-the browser the engine searches about a third as fast as the native binary.
+`pages` branch: the site in `public/` and a `wrangler.jsonc` beside it. On
+Cloudflare, connect the repo, set the production branch to `pages`, leave the
+build command empty and deploy with `npx wrangler deploy`. Any other static
+host can serve `public/` as-is. In the browser the engine searches about a
+third as fast as the native binary.
 
 **As a server.** `azul serve -public` adds the limits a public server needs: a
 2-second cap per search, several engines, per-visitor rate limits and
@@ -149,6 +152,7 @@ server/      HTTP API, limits, and the analysis board (server/ui, embedded)
 cmd/azul/    CLI
 cmd/wasm/    the engine for the browser (WebAssembly)
 scripts/     build-site.sh: the static site
+hosting/     headers and Cloudflare config for the static site
 userscript/  Tampermonkey overlay for buddyboardgames.com
 deploy/      systemd unit and Caddyfile
 ```

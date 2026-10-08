@@ -1,0 +1,9 @@
+// Tells Cloudflare what to serve: the static files in ./public, nothing else.
+// The Site workflow copies this file to the root of the "pages" branch.
+{
+  "name": "azul-engine",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./public"
+  }
+}

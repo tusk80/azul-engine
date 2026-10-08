@@ -27,11 +27,17 @@ jobs:
         run: go test ./...
       - name: Build site
         run: bash scripts/build-site.sh site
+      # Layout of the pages branch: wrangler.jsonc at the root, the site in
+      # public/. Cloudflare deploys it with "npx wrangler deploy"; any other
+      # static host can serve public/ directly.
       - name: Publish to the pages branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cd site
+          mkdir -p out
+          mv site out/public
+          cp hosting/wrangler.jsonc out/
+          cd out
           git init -q -b pages
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

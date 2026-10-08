@@ -14,7 +14,7 @@ cp server/ui/* "$out"/
 # Tell the page its engine is the WebAssembly one, so it does not look for a server.
 sed -i 's/<html lang="en">/<html lang="en" data-engine="wasm">/' "$out/index.html"
 grep -q 'data-engine="wasm"' "$out/index.html"
-cp pages/_headers "$out"/
+cp hosting/_headers "$out"/
 GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o "$out/engine.wasm" ./cmd/wasm
 cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" "$out"/
 
