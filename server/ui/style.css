@@ -475,3 +475,33 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* reference photo: stays in view above the board while the position is copied */
+.photo {
+  position: sticky;
+  top: 57px; /* under the header */
+  z-index: 15;
+  max-width: 1248px;
+  width: calc(100% - 32px);
+  margin: 16px auto 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+@media (max-width: 760px) {
+  .photo { top: 0; width: 100%; margin-top: 0; border-radius: 0; border-left: none; border-right: none; }
+}
+.photo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.photo-note { color: var(--muted); font-size: 12px; flex: 1 1 200px; }
+.photo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.photo-actions button { padding: 3px 10px; font-size: 13px; }
+.photo-view { height: 30vh; overflow: auto; background: var(--bg-2); text-align: center; }
+.photo.big .photo-view { height: 55vh; }
+.photo-view img { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; height: 100%; width: auto; object-fit: contain; }
+.photo.zoomed .photo-view img { max-width: none; max-height: none; height: auto; width: 200%; }
+@media (max-width: 760px) {
+  .photo-note { display: none; }
+  .photo-bar { padding: 6px 8px; }
+}

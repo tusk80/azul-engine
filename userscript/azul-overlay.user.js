@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Azul engine overlay
 // @namespace    azul-engine
-// @version      0.2.0
-// @description  Shows the local Azul engine's suggested move on buddyboardgames.com. Alt+A toggles.
+// @version      0.3.0
+// @description  Shows the local Azul engine's suggested move on buddyboardgames.com and opens any position in the analysis board. Alt+A toggles, Alt+S analyses.
 // @match        https://buddyboardgames.com/azul*
 // @homepageURL  https://github.com/tusk80/azul-engine
 // @downloadURL  https://raw.githubusercontent.com/tusk80/azul-engine/main/userscript/azul-overlay.user.js
@@ -21,6 +21,9 @@
   // engine instead, change this and the @connect lines above; the server
   // must be started with -cors https://buddyboardgames.com.
   const ENGINE_URL = 'http://127.0.0.1:8765/bestmove';
+  // Where "Analyze this position" opens. The position travels in the link
+  // itself (after the #), so it is never sent to a server.
+  const ANALYSIS_URL = 'https://azul.yesil.cc/';
   const THINK_MS = 1500;
   const POLL_MS = 400;
   const COLORS = ['blue', 'yellow', 'red', 'black', 'white'];
@@ -29,6 +32,7 @@
   let lastKey = null; // JSON of the last state sent to the engine
   let result = null; // last engine response for lastKey
   let status = 'waiting for your turn';
+  let analysisLink = ''; // link to the current position, on either player's turn
 
   // --- state conversion ----------------------------------------------------
 
@@ -123,11 +127,20 @@
     });
   }
 
+  // linkFor encodes a position the way the analysis board's Share links do:
+  // base64url JSON after "#p=".
+  function linkFor(state) {
+    const b64 = btoa(JSON.stringify(state)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return ANALYSIS_URL + '#p=' + b64;
+  }
+
   function tick() {
     if (!enabled) return;
     const g = unsafeWindow.thisGame;
-    const myTurn = g && g.gameState === 'STARTED' && g.meIdx >= 0 && g.turnIdx === g.meIdx;
-    const state = myTurn ? toState(g) : null;
+    const current = toState(g); // null unless a 2-player game is running
+    setAnalysisLink(current ? linkFor(current) : '');
+    const myTurn = current && g.meIdx >= 0 && g.turnIdx === g.meIdx;
+    const state = myTurn ? current : null;
     if (!state) {
       if (lastKey !== null) {
         lastKey = null;
@@ -156,6 +169,9 @@
     #azul-engine-panel .move { font-size: 16px; font-weight: 600; }
     #azul-engine-panel .eval { font-variant-numeric: tabular-nums; }
     #azul-engine-panel .dim { opacity: .7; }
+    #azul-engine-panel a { pointer-events: auto; color: #5eead4; font-weight: 600; text-decoration: none; }
+    #azul-engine-panel a:hover { text-decoration: underline; }
+    #azul-engine-panel .foot { margin-top: 6px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
     .azul-engine-src { outline: 3px solid #22d3ee !important; outline-offset: 2px; border-radius: 4px;
       animation: azul-engine-pulse 1s ease-in-out infinite alternate; }
     .azul-engine-dst { outline: 3px solid #a3e635 !important; outline-offset: 1px; }
@@ -166,6 +182,31 @@
   const panel = document.createElement('div');
   panel.id = 'azul-engine-panel';
   document.body.appendChild(panel);
+
+  // The panel has two parts. The body is rebuilt whenever the suggestion
+  // changes; the footer is built once, so its link is never replaced in the
+  // middle of a click.
+  const body = document.createElement('div');
+  const foot = document.createElement('div');
+  foot.className = 'foot';
+  const link = document.createElement('a');
+  link.textContent = 'Analyze this position ↗';
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.title = 'Open this position in the analysis board (Alt+S)';
+  link.style.display = 'none';
+  const hint = document.createElement('span');
+  hint.className = 'dim';
+  hint.textContent = 'Alt+A to hide';
+  foot.append(link, hint);
+  panel.append(body, foot);
+
+  function setAnalysisLink(url) {
+    if (url === analysisLink) return;
+    analysisLink = url;
+    link.style.display = url ? '' : 'none';
+    if (url) link.href = url;
+  }
 
   function describe(m) {
     const src = m.source === 'center' ? 'Center' : 'Factory ' + m.factory;
@@ -182,22 +223,21 @@
 
   function render() {
     panel.style.display = enabled ? '' : 'none';
-    panel.replaceChildren();
+    body.replaceChildren();
     if (!enabled) return;
     if (result) {
       const evalText = result.outcome ? `${result.outcome} ${result.evalText.split(' ')[1]}` : result.evalText;
-      panel.append(
+      body.append(
         el('div', 'move', describe(result.move)),
         el('div', 'eval', `eval ${evalText}  ·  depth ${result.depth}${result.exact ? ' (exact)' : ''}`),
         el('div', '', result.reason),
       );
       if (result.lines && result.lines.length > 1) {
-        panel.append(el('div', 'dim', 'also: ' + result.lines.slice(1).map((l) => `${l.move.text} (${l.evalText})`).join(', ')));
+        body.append(el('div', 'dim', 'also: ' + result.lines.slice(1).map((l) => `${l.move.text} (${l.evalText})`).join(', ')));
       }
     } else {
-      panel.append(el('div', 'dim', 'Azul engine: ' + status));
+      body.append(el('div', 'dim', 'Azul engine: ' + status));
     }
-    panel.append(el('div', 'dim', 'Alt+A to hide'));
   }
 
   function clearHighlights() {
@@ -227,6 +267,9 @@
       if (!enabled) clearHighlights();
       lastKey = null; // re-ask when turned back on
       render();
+      e.preventDefault();
+    } else if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 's' && enabled && analysisLink) {
+      window.open(analysisLink, '_blank', 'noopener');
       e.preventDefault();
     }
   });

@@ -46,6 +46,8 @@ go build -o azul ./cmd/azul
 - **Edit board**: pick a color or the eraser, then click factory slots, line cells,
   wall cells or floor slots. The engine checks the position as you go.
 - **Share**: copies a link that opens the exact position.
+- **Photo**: shows a picture of a real board above the editor while you click its
+  tiles in. The picture never leaves your device.
 - **Import / export**: paste a position as JSON or copy the current one.
 - **Examples**, a light/dark switch, and optional symbols on tiles for color-blind use.
 - **Undo** (Ctrl+Z) and the history list step back.
@@ -80,6 +82,9 @@ Caddy, Cloudflare and Docker.
    and press **Install** when Tampermonkey asks.
 4. In a 2-player game, a panel shows the suggested move on your turn; the source
    tiles pulse and the target line is outlined. **Alt+A** hides or shows it.
+5. **Analyze this position** (or **Alt+S**) opens the current position in the
+   analysis board, on either player's turn. This part works without the local
+   engine: the position travels in the link itself.
 
 The script reads the page's own game object and only talks to `127.0.0.1`.
 

@@ -38,6 +38,8 @@
       <button id="btn-edit" aria-pressed="false" title="Set up any position">Edit board</button>
       <button id="btn-share" title="Copy a link to this position">Share</button>
       <button id="btn-json" title="Paste or copy a position as JSON">Import / export</button>
+      <button id="btn-photo" title="Show a photo of a real board next to the editor">Photo</button>
+      <input type="file" id="photo-file" accept="image/*" hidden>
       <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
       <button id="btn-help" class="icon" title="Help (?)" aria-label="Help">?</button>
     </nav>
@@ -53,6 +55,23 @@
       </ol>
     </div>
     <button id="intro-close" class="primary">Got it</button>
+  </section>
+
+  <section id="photo" class="photo" aria-label="Reference photo" hidden>
+    <div class="photo-bar">
+      <strong>Your photo</strong>
+      <span class="photo-note">Stays on this device. Copy the board from it with <em>Edit board</em>.</span>
+      <span class="photo-actions">
+        <button id="photo-size" title="Make the photo taller or shorter">Bigger</button>
+        <button id="photo-zoom" title="Zoom in to read small tiles">Zoom in</button>
+        <button id="photo-rotate" class="icon" title="Rotate a quarter turn" aria-label="Rotate">⟳</button>
+        <button id="photo-change">Change</button>
+        <button id="photo-remove">Remove</button>
+      </span>
+    </div>
+    <div id="photo-view" class="photo-view">
+      <img id="photo-img" alt="Photo of a board to copy from">
+    </div>
   </section>
 
   <main class="layout">
@@ -137,6 +156,8 @@
         <dd>Click an engine move, then step with ◀ ▶ or the arrow keys. <em>Play to here</em> makes those moves.</dd>
         <dt>End of a round</dt>
         <dd><em>Score round</em>, then <em>Deal next round</em> for a random deal, or edit in the real one.</dd>
+        <dt>Copy from a photo</dt>
+        <dd><em>Photo</em> shows a picture of a real board above the editor while you click its tiles in. The picture never leaves your device.</dd>
         <dt>Share</dt>
         <dd><em>Share</em> copies a link that opens this exact position.</dd>
       </dl>

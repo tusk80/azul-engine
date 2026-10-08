@@ -478,6 +478,66 @@ async function setup() {
   if (cfg.version) $('version').textContent = 'build ' + cfg.version;
 }
 
+// ------------------------------------------------------------------ photo
+
+// A reference photo of a real board, shown above the editor while its tiles
+// are clicked in. It is read from the device as a local object URL and never
+// uploaded anywhere.
+const photo = { url: '', turns: 0, source: null };
+
+function showPhoto(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    toast('That file is not an image.');
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    photo.source = img;
+    photo.turns = 0;
+    drawPhoto();
+    $('photo').hidden = false;
+    if (!ui.edit && !ui.pv) toggleEdit();
+    toast('Photo added. Click its tiles into the board, then press Done editing.');
+  };
+  img.onerror = () => toast('That image could not be opened.');
+  img.src = URL.createObjectURL(file);
+}
+
+// drawPhoto renders the source at the current rotation. Rotating on a canvas
+// (rather than with CSS) keeps the layout and scrolling right. Large photos
+// are scaled down: 2000 px on the long side is plenty to read tiles.
+function drawPhoto() {
+  const src = photo.source;
+  const scale = Math.min(1, 2000 / Math.max(src.naturalWidth, src.naturalHeight));
+  const w = Math.round(src.naturalWidth * scale);
+  const hgt = Math.round(src.naturalHeight * scale);
+  const sideways = photo.turns % 2 === 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = sideways ? hgt : w;
+  canvas.height = sideways ? w : hgt;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((photo.turns * Math.PI) / 2);
+  ctx.drawImage(src, -w / 2, -hgt / 2, w, hgt);
+  canvas.toBlob((blob) => {
+    if (photo.url) URL.revokeObjectURL(photo.url);
+    photo.url = URL.createObjectURL(blob);
+    $('photo-img').src = photo.url;
+  }, 'image/jpeg', 0.9);
+}
+
+function removePhoto() {
+  if (photo.url) URL.revokeObjectURL(photo.url);
+  if (photo.source) URL.revokeObjectURL(photo.source.src);
+  photo.url = '';
+  photo.source = null;
+  $('photo-img').removeAttribute('src');
+  $('photo').hidden = true;
+  $('photo').classList.remove('big', 'zoomed');
+  $('photo-size').textContent = 'Bigger';
+  $('photo-zoom').textContent = 'Zoom in';
+}
+
 // ------------------------------------------------------------- rendering
 
 function h(tag, attrs, ...children) {
@@ -932,6 +992,32 @@ $('opt-symbols').addEventListener('change', (e) => {
   store.set('azul.symbols', e.target.checked ? '1' : '0');
 });
 window.addEventListener('hashchange', loadFromHash);
+$('btn-photo').addEventListener('click', () => $('photo-file').click());
+$('photo-change').addEventListener('click', () => $('photo-file').click());
+$('photo-file').addEventListener('change', (e) => {
+  showPhoto(e.target.files[0]);
+  e.target.value = ''; // picking the same file again should work
+});
+$('photo-remove').addEventListener('click', removePhoto);
+$('photo-rotate').addEventListener('click', () => {
+  photo.turns = (photo.turns + 1) % 4;
+  drawPhoto();
+});
+$('photo-size').addEventListener('click', (e) => {
+  e.target.textContent = $('photo').classList.toggle('big') ? 'Smaller' : 'Bigger';
+});
+$('photo-zoom').addEventListener('click', (e) => {
+  e.target.textContent = $('photo').classList.toggle('zoomed') ? 'Zoom out' : 'Zoom in';
+});
+// Dropping an image anywhere on the page works too.
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  const file = e.dataTransfer && e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    e.preventDefault();
+    showPhoto(file);
+  }
+});
 $('json-load').addEventListener('click', loadJSON);
 $('json-copy').addEventListener('click', async () => {
   try {
