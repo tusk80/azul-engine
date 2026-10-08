@@ -1,6 +1,7 @@
 # Azul Engine
 
 [![CI](https://github.com/tusk80/azul-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/tusk80/azul-engine/actions/workflows/ci.yml)
+[![Site](https://github.com/tusk80/azul-engine/actions/workflows/site.yml/badge.svg)](https://github.com/tusk80/azul-engine/actions/workflows/site.yml)
 
 An engine and analysis board for 2-player Azul (standard wall), written in Go.
 It runs two ways from the same code: as one native binary (engine, HTTP API and
