@@ -60,8 +60,9 @@ bash scripts/build-site.sh    # writes site/
 The `Site` workflow does this on every push and publishes the result to the
 `pages` branch: the site in `public/` and a `wrangler.jsonc` beside it. On
 Cloudflare, connect the repo, set the production branch to `pages`, leave the
-build command empty and deploy with `npx wrangler deploy`. Any other static
-host can serve `public/` as-is. In the browser the engine searches about a
+build command empty, deploy with `npx wrangler deploy`, and turn preview
+builds off (only the `pages` branch is deployable). Any other static host can
+serve `public/` as-is. In the browser the engine searches about a
 third as fast as the native binary.
 
 **As a server.** `azul serve -public` adds the limits a public server needs: a
