@@ -29,21 +29,70 @@ const ui = {
 
 // ---------------------------------------------------------------- server
 
-async function api(path, body) {
+// The engine is reached in one of two ways, chosen in setup():
+//   - over HTTP, when the page is served by the engine's own server;
+//   - as WebAssembly in a Web Worker, when the page is on a static host.
+// Both take a path and a JSON body and give back {status, data}.
+let transport = httpCall;
+
+async function httpCall(path, body) {
   const res = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  let data;
   try {
-    data = await res.json();
+    return { status: res.status, data: await res.json() };
   } catch {
-    throw new Error(`${path}: ${res.status} ${res.statusText}`);
+    return { status: res.status || 500, data: { error: `${path}: ${res.status} ${res.statusText}` } };
   }
-  if (res.status === 429) throw new Error('Too many requests. Give it a few seconds and try again.');
-  if (res.status === 503) throw new Error('The engine is busy right now. Try again in a moment.');
-  if (!res.ok) throw new Error(data.error || res.statusText);
+}
+
+// The worker answers one request at a time, in order. A search that has
+// been overtaken by a newer one is dropped before it starts, so quick moves
+// do not queue up a second of thinking each.
+const wasm = { worker: null, nextId: 1, waiting: new Map(), chain: Promise.resolve(), latestSearch: 0 };
+
+function wasmCall(path, body) {
+  const isSearch = path === '/bestmove';
+  const mine = isSearch ? ++wasm.latestSearch : 0;
+  const result = wasm.chain.then(() => {
+    if (isSearch && mine !== wasm.latestSearch) return { status: 499, data: { error: 'superseded' } };
+    return new Promise((resolve) => {
+      const id = wasm.nextId++;
+      wasm.waiting.set(id, resolve);
+      wasm.worker.postMessage({ id, path, body });
+    });
+  });
+  wasm.chain = result.catch(() => {});
+  return result;
+}
+
+function startWasm() {
+  wasm.worker = new Worker('engine-worker.js');
+  wasm.worker.onmessage = (e) => {
+    const resolve = wasm.waiting.get(e.data.id);
+    wasm.waiting.delete(e.data.id);
+    let data;
+    try {
+      data = JSON.parse(e.data.body);
+    } catch {
+      data = { error: 'bad response from the engine' };
+    }
+    if (resolve) resolve({ status: e.data.status, data });
+  };
+  wasm.worker.onerror = () => {
+    for (const resolve of wasm.waiting.values()) resolve({ status: 500, data: { error: 'The engine could not be loaded. Reload the page to try again.' } });
+    wasm.waiting.clear();
+  };
+  transport = wasmCall;
+}
+
+async function api(path, body) {
+  const { status, data } = await transport(path, body);
+  if (status === 429) throw new Error('Too many requests. Give it a few seconds and try again.');
+  if (status === 503) throw new Error('The engine is busy right now. Try again in a moment.');
+  if (status < 200 || status >= 300) throw new Error(data.error || `request failed (${status})`);
   return data;
 }
 
@@ -386,7 +435,12 @@ function applySymbols(on) {
   $('opt-symbols').checked = on;
 }
 
-// setup reads the server's limits and the visitor's saved preferences.
+// setStatusNote shows a line under the board before the first position is in.
+function setStatusNote(text) {
+  $('status').textContent = text;
+}
+
+// setup reads the engine's limits and the visitor's saved preferences.
 async function setup() {
   applyTheme(store.get('azul.theme'));
   applySymbols(store.get('azul.symbols') === '1');
@@ -394,12 +448,29 @@ async function setup() {
 
   EXAMPLES.forEach((e, i) => $('examples').append(h('option', { value: i }, e.name)));
 
-  let cfg = { defaultTimeMs: 1000, maxTimeMs: 30000, version: '' };
-  try {
-    const res = await fetch('/config');
-    if (res.ok) cfg = await res.json();
-  } catch { /* older server: keep the defaults */ }
-  // Offer only search times this server will honour.
+  // The static build marks the page (data-engine="wasm"): the engine then
+  // runs in the browser. Otherwise the page came from an engine server,
+  // which answers /config with its limits.
+  let cfg = null;
+  if (document.documentElement.dataset.engine !== 'wasm') {
+    try {
+      const res = await fetch('/config');
+      const data = res.ok ? await res.json() : null;
+      if (data && data.maxTimeMs) cfg = data;
+    } catch { /* fall back to the in-browser engine */ }
+  }
+  if (!cfg) {
+    startWasm();
+    setStatusNote('Loading the engine…');
+    try {
+      cfg = await api('/config', {});
+    } catch (e) {
+      ui.error = e.message;
+      cfg = { defaultTimeMs: 1000, maxTimeMs: 10000, version: '' };
+    }
+    setStatusNote('');
+  }
+  // Offer only search times this engine will honour.
   const times = [300, 1000, 2000, 3000, 10000].filter((ms) => ms <= cfg.maxTimeMs);
   const saved = +store.get('azul.think');
   const pick = times.includes(saved) ? saved : times.reduce((a, b) => (Math.abs(b - cfg.defaultTimeMs) < Math.abs(a - cfg.defaultTimeMs) ? b : a));

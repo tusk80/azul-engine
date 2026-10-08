@@ -103,3 +103,48 @@ func TestNewGameIsReproducible(t *testing.T) {
 		t.Fatal("the same seed should give the same deal, and another seed a different one")
 	}
 }
+
+func TestDispatch(t *testing.T) {
+	eng := search.New(16)
+	lim := Limits{MoveTime: 100 * time.Millisecond, MaxMoveTime: 200 * time.Millisecond}
+	call := func(path, body string) (int, map[string]any) {
+		t.Helper()
+		status, out := Dispatch(eng, lim, path, []byte(body))
+		var v map[string]any
+		if err := json.Unmarshal(out, &v); err != nil {
+			t.Fatalf("%s: response is not JSON: %s", path, out)
+		}
+		return status, v
+	}
+
+	if status, v := call("/config", ""); status != 200 || v["maxTimeMs"] != float64(200) {
+		t.Fatalf("/config: %d %v", status, v)
+	}
+	status, v := call("/new", `{"seed":3}`)
+	if status != 200 || v["state"] == nil {
+		t.Fatalf("/new: %d %v", status, v)
+	}
+	state, _ := json.Marshal(v["state"])
+
+	start := time.Now()
+	status, v = call("/bestmove", `{"state":`+string(state)+`,"timeMs":60000}`)
+	if status != 200 || v["move"] == nil || v["reason"] == "" {
+		t.Fatalf("/bestmove: %d %v", status, v)
+	}
+	if el := time.Since(start); el > 2*time.Second {
+		t.Fatalf("a 60 s request ran %v despite a 200 ms cap", el)
+	}
+	move := v["move"].(map[string]any)["text"].(string)
+
+	if status, v = call("/apply", `{"state":`+string(state)+`,"moves":["`+move+`"]}`); status != 200 || len(v["positions"].([]any)) != 2 {
+		t.Fatalf("/apply: %d %v", status, v)
+	}
+	for path, want := range map[string]int{"/nope": 404, "/apply": 400, "/bestmove": 400} {
+		if status, v := call(path, `{}`); status != want || v["error"] == nil {
+			t.Errorf("%s with no state: %d %v, want %d", path, status, v, want)
+		}
+	}
+	if status, _ := call("/apply", `not json`); status != 400 {
+		t.Errorf("bad JSON: status %d, want 400", status)
+	}
+}
