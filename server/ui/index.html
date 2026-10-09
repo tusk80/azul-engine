@@ -62,6 +62,7 @@
       <strong>Your photo</strong>
       <span class="photo-note">Stays on this device. Copy the board from it with <em>Edit board</em>.</span>
       <span class="photo-actions">
+        <button id="photo-ai" class="primary" title="Fill in the board from this photo using your own AI key">Read with AI</button>
         <button id="photo-size" title="Make the photo taller or shorter">Bigger</button>
         <button id="photo-zoom" title="Zoom in to read small tiles">Zoom in</button>
         <button id="photo-rotate" class="icon" title="Rotate a quarter turn" aria-label="Rotate">⟳</button>
@@ -157,7 +158,7 @@
         <dt>End of a round</dt>
         <dd><em>Score round</em>, then <em>Deal next round</em> for a random deal, or edit in the real one.</dd>
         <dt>Copy from a photo</dt>
-        <dd><em>Photo</em> shows a picture of a real board above the editor while you click its tiles in. The picture never leaves your device.</dd>
+        <dd><em>Photo</em> shows a picture of a real board above the editor while you click its tiles in. <em>Read with AI</em> fills the board in from the picture with your own AI key; always check its work.</dd>
         <dt>Share</dt>
         <dd><em>Share</em> copies a link that opens this exact position.</dd>
       </dl>
@@ -165,6 +166,7 @@
       <p class="keys"><kbd>←</kbd> <kbd>→</kbd> step through a line · <kbd>Esc</kbd> cancel · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>?</kbd> this help</p>
       <h3>Display</h3>
       <label class="check"><input type="checkbox" id="opt-symbols"> Show a symbol on every tile (helps if colors are hard to tell apart)</label>
+      <p class="keys">Read with AI uses your own Google Gemini or Anthropic key. It is saved only in this browser and sent, with the photo, only to that provider. <button type="button" id="ai-forget">Forget my AI key</button></p>
       <div class="row">
         <button value="close" class="primary">Close</button>
       </div>

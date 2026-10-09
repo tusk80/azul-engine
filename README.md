@@ -47,7 +47,10 @@ go build -o azul ./cmd/azul
   wall cells or floor slots. The engine checks the position as you go.
 - **Share**: copies a link that opens the exact position.
 - **Photo**: shows a picture of a real board above the editor while you click its
-  tiles in. The picture never leaves your device.
+  tiles in. The picture stays on your device unless you press **Read with AI**,
+  which fills the board in using your own Google Gemini or Anthropic API key
+  (kept in your browser, sent only to that provider). Check the result: models
+  misread tiles.
 - **Import / export**: paste a position as JSON or copy the current one.
 - **Examples**, a light/dark switch, and optional symbols on tiles for color-blind use.
 - **Undo** (Ctrl+Z) and the history list step back.

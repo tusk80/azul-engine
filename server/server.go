@@ -125,7 +125,7 @@ func (w *statusWriter) WriteHeader(code int) {
 // The page loads only its own scripts and styles and talks only to this
 // server. Images may also be blob: URLs: the reference photo is shown from
 // one and never leaves the browser.
-const csp = "default-src 'self'; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+const csp = "default-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()

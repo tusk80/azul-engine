@@ -481,9 +481,10 @@ async function setup() {
 // ------------------------------------------------------------------ photo
 
 // A reference photo of a real board, shown above the editor while its tiles
-// are clicked in. It is read from the device as a local object URL and never
-// uploaded anywhere.
-const photo = { url: '', turns: 0, source: null };
+// are clicked in. It is read from the device as a local object URL. It leaves
+// the device only if the visitor presses "Read with AI", and then goes
+// straight to the AI provider their own key belongs to.
+const photo = { url: '', turns: 0, source: null, data: '' };
 
 function showPhoto(file) {
   if (!file || !file.type.startsWith('image/')) {
@@ -497,7 +498,7 @@ function showPhoto(file) {
     drawPhoto();
     $('photo').hidden = false;
     if (!ui.edit && !ui.pv) toggleEdit();
-    toast('Photo added. Click its tiles into the board, then press Done editing.');
+    toast('Photo added. Click its tiles into the board, or press Read with AI.');
   };
   img.onerror = () => toast('That image could not be opened.');
   img.src = URL.createObjectURL(file);
@@ -519,6 +520,7 @@ function drawPhoto() {
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate((photo.turns * Math.PI) / 2);
   ctx.drawImage(src, -w / 2, -hgt / 2, w, hgt);
+  photo.data = canvas.toDataURL('image/jpeg', 0.9).split(',')[1]; // base64, as rotated
   canvas.toBlob((blob) => {
     if (photo.url) URL.revokeObjectURL(photo.url);
     photo.url = URL.createObjectURL(blob);
@@ -536,6 +538,144 @@ function removePhoto() {
   $('photo').classList.remove('big', 'zoomed');
   $('photo-size').textContent = 'Bigger';
   $('photo-zoom').textContent = 'Zoom in';
+}
+
+// -------------------------------------------------------------- AI import
+
+// "Read with AI" sends the photo to a vision model using the visitor's own
+// API key, straight from the browser. The key's prefix picks the provider:
+// Anthropic keys start with "sk-ant-", anything else is treated as Gemini.
+const AI_MODELS = { anthropic: 'claude-opus-5-5', gemini: 'gemini-3.8-flash' };
+
+const AI_PROMPT = `This photo shows a 2-player game of Azul in progress. Read the position and reply with JSON only, no other text.
+
+Colors are exactly: "blue", "yellow", "red", "black", "white" (call dark tiles "black", including dark green or teal ones).
+
+{
+  "toMove": 0,
+  "tokenInCenter": true,
+  "nextFirst": 0,
+  "factories": [[], [], [], [], []],
+  "center": [],
+  "players": [
+    {"score": 0, "wall": [".....", ".....", ".....", ".....", "....."], "lines": [{}, {}, {}, {}, {}], "floor": 0},
+    {"score": 0, "wall": [".....", ".....", ".....", ".....", "....."], "lines": [{}, {}, {}, {}, {}], "floor": 0}
+  ]
+}
+
+- factories: the 5 round factory displays, each a list of the tile colors on it (0 to 4 tiles).
+- center: the loose tiles in the middle of the table. tokenInCenter is true if the first-player marker (the "1" tile) is still there; if a player has it, set it false and nextFirst to that player's index.
+- players: index 0 is the board nearest the bottom of the photo (or the left one), index 1 the other.
+- wall: the 5x5 grid on the right of a board, top row first, 5 characters per row: "x" where a tile has been placed, "." where the square is empty (a printed pattern with no tile on it is empty).
+- lines: the 5 staircase rows on the left of a board, top (1 space) to bottom (5 spaces). Use {"color": "red", "count": 2} for a row holding tiles and {} for an empty row.
+- floor: how many spaces of the bottom penalty row are occupied, counting the first-player marker.
+- score: the score marked on that board's track, or 0 if you cannot tell.
+- toMove: 0 unless the photo makes clear whose turn it is.
+
+If something is hidden or unclear, give your best guess; a person will check it.`;
+
+async function aiFetch(url, headers, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  const message = (data.error && data.error.message) || '';
+  // Gemini reports a bad key as a 400 whose message names the API key.
+  if (res.status === 401 || res.status === 403 || /api key/i.test(message)) {
+    store.set('azul.aikey', '');
+    throw new Error('the key was rejected, so it has been forgotten. Press Read with AI to enter another.');
+  }
+  if (!res.ok) throw new Error(message || `the provider answered ${res.status}`);
+  return data;
+}
+
+async function askAnthropic(key, image) {
+  const data = await aiFetch('https://api.anthropic.com/v1/messages', {
+    'x-api-key': key,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true', // the key is the visitor's own
+  }, {
+    model: AI_MODELS.anthropic,
+    max_tokens: 16000,
+    messages: [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+      { type: 'text', text: AI_PROMPT },
+    ] }],
+  });
+  const block = (data.content || []).find((b) => b.type === 'text');
+  if (!block) throw new Error(data.stop_reason === 'refusal' ? 'the model declined to read this photo' : 'the model sent no answer');
+  return block.text;
+}
+
+async function askGemini(key, image) {
+  const data = await aiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${AI_MODELS.gemini}:generateContent`, {
+    'x-goog-api-key': key,
+  }, {
+    contents: [{ parts: [{ inline_data: { mime_type: 'image/jpeg', data: image } }, { text: AI_PROMPT }] }],
+    generationConfig: { responseMimeType: 'application/json' },
+  });
+  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+  const text = parts.map((p) => p.text || '').join('');
+  if (!text) throw new Error('the model sent no answer');
+  return text;
+}
+
+// aiState turns whatever the model sent into a well-formed draft: right
+// shapes, known colors, counts in range. The engine still checks the result
+// like any other edit, and the person checks it against the photo.
+function aiState(s) {
+  const colors = (a) => (Array.isArray(a) ? a.filter((c) => COLORS.includes(c)) : []);
+  const player = (p) => ({
+    score: Math.max(0, (p && p.score) | 0),
+    wall: Array.from({ length: 5 }, (_, r) => Array.from({ length: 5 }, (_, c) => {
+      const ch = String(((p && p.wall) || [])[r] || '')[c];
+      return ch && ch !== '.' && ch !== ' ' ? 'x' : '.';
+    }).join('')),
+    lines: Array.from({ length: 5 }, (_, r) => {
+      const l = ((p && p.lines) || [])[r] || {};
+      return COLORS.includes(l.color) && l.count > 0 ? { color: l.color, count: Math.min(l.count | 0, r + 1) } : {};
+    }),
+    floor: Math.min(7, Math.max(0, (p && p.floor) | 0)),
+  });
+  const players = Array.isArray(s.players) ? s.players : [];
+  return {
+    toMove: s.toMove === 1 ? 1 : 0,
+    nextFirst: s.nextFirst === 1 ? 1 : 0,
+    tokenInCenter: s.tokenInCenter !== false,
+    factories: Array.from({ length: 5 }, (_, i) => colors((s.factories || [])[i]).slice(0, 4)),
+    center: colors(s.center),
+    players: [player(players[0]), player(players[1])],
+  };
+}
+
+async function readPhotoWithAI() {
+  let key = store.get('azul.aikey');
+  if (!key) {
+    key = (prompt('Paste your own API key (Google Gemini or Anthropic).\n\nIt is saved only in this browser. The key and the photo are sent only to that provider.') || '').trim();
+    if (!key) return;
+    store.set('azul.aikey', key);
+  }
+  const btn = $('photo-ai');
+  btn.disabled = true;
+  btn.textContent = 'Reading…';
+  try {
+    const text = await (key.startsWith('sk-ant-') ? askAnthropic : askGemini)(key, photo.data);
+    let parsed;
+    try {
+      parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    } catch {
+      throw new Error('the model did not describe a board. Try a clearer photo.');
+    }
+    const state = aiState(parsed);
+    if (!ui.edit) toggleEdit();
+    ui.bagManual = false;
+    ui.draft = state;
+    edited();
+    toast('Filled in from the photo. Check every tile against it: AI makes mistakes.');
+  } catch (e) {
+    toast('AI import failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Read with AI';
+  }
 }
 
 // ------------------------------------------------------------- rendering
@@ -999,6 +1139,11 @@ $('photo-file').addEventListener('change', (e) => {
   e.target.value = ''; // picking the same file again should work
 });
 $('photo-remove').addEventListener('click', removePhoto);
+$('photo-ai').addEventListener('click', readPhotoWithAI);
+$('ai-forget').addEventListener('click', () => {
+  store.set('azul.aikey', '');
+  toast('AI key forgotten.');
+});
 $('photo-rotate').addEventListener('click', () => {
   photo.turns = (photo.turns + 1) % 4;
   drawPhoto();
