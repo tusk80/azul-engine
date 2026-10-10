@@ -1,0 +1,14 @@
+// Tells Cloudflare what to serve: the static files in ./public, nothing else.
+// The Site workflow copies this file to the root of the "pages" branch.
+{
+  "name": "azul-engine",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./public",
+    // Serve .html files at their exact address. The default redirects
+    // /x.html to /x, which breaks Google's site-verification file.
+    "html_handling": "none",
+    // With that off, "/" has no file of its own: answer it with index.html.
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-engine="wasm">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Azul Engine — best-move analysis board</title>
+  <meta name="description" content="Find the best move in any 2-player Azul position. Set up a board, see the top moves with a point breakdown, and step through each line of play.">
+  <meta name="theme-color" content="#0f766e">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Azul Engine — best-move analysis board">
+  <meta property="og:description" content="Set up any 2-player Azul position and see the best moves, with a point breakdown and the line of play behind each one.">
+  <meta property="og:url" content="https://azul.yesil.cc/">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Analysis board</span>
+      </span>
+    </a>
+    <nav class="actions" aria-label="Board actions">
+      <button id="btn-new" title="Deal a fresh game">New game</button>
+      <select id="examples" aria-label="Load an example position">
+        <option value="">Examples…</option>
+      </select>
+      <button id="btn-undo" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="btn-edit" aria-pressed="false" title="Set up any position">Edit board</button>
+      <button id="btn-share" title="Copy a link to this position">Share</button>
+      <button id="btn-json" title="Paste or copy a position as JSON">Import / export</button>
+      <button id="btn-photo" title="Show a photo of a real board next to the editor">Photo</button>
+      <input type="file" id="photo-file" accept="image/*" hidden>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+      <button id="btn-help" class="icon" title="Help (?)" aria-label="Help">?</button>
+    </nav>
+  </header>
+
+  <section id="intro" class="intro" hidden>
+    <div class="intro-text">
+      <h2>Find the best move in any Azul position</h2>
+      <ol>
+        <li><strong>Set up</strong> a position: play moves by clicking tiles, or use <em>Edit board</em> to copy a real game.</li>
+        <li><strong>Read</strong> the engine's top three moves, each with its points, penalties and bonuses.</li>
+        <li><strong>Explore</strong>: click a move to step through the line of play behind it.</li>
+      </ol>
+    </div>
+    <button id="intro-close" class="primary">Got it</button>
+  </section>
+
+  <section id="photo" class="photo" aria-label="Reference photo" hidden>
+    <div class="photo-bar">
+      <strong>Your photo</strong>
+      <span class="photo-note">Stays on this device. Copy the board from it with <em>Edit board</em>.</span>
+      <span class="photo-actions">
+        <button id="photo-ai" class="primary" title="Fill in the board from this photo using your own AI key">Read with AI</button>
+        <button id="photo-size" title="Make the photo taller or shorter">Bigger</button>
+        <button id="photo-zoom" title="Zoom in to read small tiles">Zoom in</button>
+        <button id="photo-rotate" class="icon" title="Rotate a quarter turn" aria-label="Rotate">⟳</button>
+        <button id="photo-change">Change</button>
+        <button id="photo-remove">Remove</button>
+      </span>
+    </div>
+    <div id="photo-view" class="photo-view">
+      <img id="photo-img" alt="Photo of a board to copy from">
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="board-col" aria-label="Board">
+      <div id="evalbar" class="evalbar"></div>
+      <div id="editbar" class="panel editbar" hidden></div>
+      <div id="table" class="table"></div>
+      <div id="players" class="players"></div>
+      <div id="status" class="status" role="status"></div>
+    </section>
+
+    <aside class="side-col" aria-label="Analysis">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Engine</h2>
+          <label>Think
+            <select id="think"></select>
+          </label>
+          <label title="Analyse every new position"><input type="checkbox" id="auto" checked> Auto</label>
+          <button id="btn-analyze" class="primary">Analyze</button>
+        </div>
+        <div id="analysis"></div>
+      </div>
+
+      <div id="pv-panel" class="panel" hidden>
+        <div class="panel-head">
+          <h2>Line of play</h2>
+          <button id="btn-pv-play" title="Make these moves on the board">Play to here</button>
+          <button id="btn-pv-close" title="Back to the position (Esc)">Close</button>
+        </div>
+        <div class="stepper">
+          <button id="pv-first" class="icon" aria-label="First">⏮</button>
+          <button id="pv-prev" class="icon" aria-label="Previous (←)">◀</button>
+          <span id="pv-pos" class="pos"></span>
+          <button id="pv-next" class="icon" aria-label="Next (→)">▶</button>
+          <button id="pv-last" class="icon" aria-label="Last">⏭</button>
+        </div>
+        <div id="pv-steps" class="pvsteps"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>History</h2></div>
+        <ol id="history" class="history"></ol>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="https://github.com/tusk80/azul-engine/releases/latest" rel="noopener">Download for your computer</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+    <span id="version"></span>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="json-dialog">
+    <form method="dialog">
+      <h2>Import / export</h2>
+      <label for="json-text">A position as JSON. Paste one and press Load, or copy this one.</label>
+      <textarea id="json-text" spellcheck="false"></textarea>
+      <div class="row">
+        <span id="json-err" class="err"></span>
+        <button type="button" id="json-copy">Copy</button>
+        <button type="button" id="json-load" class="primary">Load</button>
+        <button value="close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="help-dialog">
+    <form method="dialog">
+      <h2>How to use the board</h2>
+      <dl class="help">
+        <dt>Play a move</dt>
+        <dd>Click tiles in a factory or the center, then click a highlighted pattern line or the floor.</dd>
+        <dt>Copy a real game</dt>
+        <dd><em>Edit board</em>, pick a color, then click factory slots, line cells, wall cells and floor slots. The board tells you if a position is impossible.</dd>
+        <dt>Read the engine</dt>
+        <dd>The number is the expected lead in points for the player to move. Chips show what the move does right now: wall points, bonuses, floor penalty.</dd>
+        <dt>Explore a line</dt>
+        <dd>Click an engine move, then step with ◀ ▶ or the arrow keys. <em>Play to here</em> makes those moves.</dd>
+        <dt>End of a round</dt>
+        <dd><em>Score round</em>, then <em>Deal next round</em> for a random deal, or edit in the real one.</dd>
+        <dt>Copy from a photo</dt>
+        <dd><em>Photo</em> shows a picture of a real board above the editor while you click its tiles in. <em>Read with AI</em> fills the board in from the picture with your own AI key; always check its work.</dd>
+        <dt>Share</dt>
+        <dd><em>Share</em> copies a link that opens this exact position.</dd>
+      </dl>
+      <h3>Keys</h3>
+      <p class="keys"><kbd>←</kbd> <kbd>→</kbd> step through a line · <kbd>Esc</kbd> cancel · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>?</kbd> this help</p>
+      <h3>Display</h3>
+      <label class="check"><input type="checkbox" id="opt-symbols"> Show a symbol on every tile (helps if colors are hard to tell apart)</label>
+      <p class="keys">Read with AI uses your own Google Gemini or Anthropic key. It is saved only in this browser and sent, with the photo, only to that provider. <button type="button" id="ai-forget">Forget my AI key</button></p>
+      <div class="row">
+        <button value="close" class="primary">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
