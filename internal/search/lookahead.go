@@ -3,8 +3,8 @@ package search
 import (
 	"math/rand/v2"
 
-	"github.com/tusk80/azul-engine/eval"
-	"github.com/tusk80/azul-engine/game"
+	"github.com/tusk80/azul-engine/internal/eval"
+	"github.com/tusk80/azul-engine/internal/game"
 )
 
 // Lookahead configures round-end evaluation by sampling: at the end of a

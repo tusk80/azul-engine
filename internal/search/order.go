@@ -1,6 +1,6 @@
 package search
 
-import "github.com/tusk80/azul-engine/game"
+import "github.com/tusk80/azul-engine/internal/game"
 
 const (
 	scoreTT     = 1 << 30

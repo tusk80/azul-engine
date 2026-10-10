@@ -5,7 +5,7 @@ A tour of the ideas, in the order a move is found.
 ## 1. The position
 
 A whole 2-player game fits in about 110 bytes with no pointers
-([game/state.go](../game/state.go)). That makes copying a position cheaper than
+([game/state.go](../internal/game/state.go)). That makes copying a position cheaper than
 undoing a move, so the search just copies ("copy-make") and never has to get
 an undo right.
 
@@ -51,7 +51,7 @@ smaller one, and ties on points go to complete rows, as in the rules.
 ## 3. The evaluation
 
 At a leaf the engine starts from the real score difference and adds a handful
-of terms ([eval/eval.go](../eval/eval.go)):
+of terms ([eval/eval.go](../internal/eval/eval.go)):
 
 | Term | What it sees |
 |---|---|
@@ -70,7 +70,7 @@ neighbours (one mask and a popcount).
 ## 4. Tuning by self-play
 
 Every weight was set by playing the engine against itself
-([selfplay/](../selfplay)):
+([selfplay/](../internal/selfplay)):
 
 - Each deal is played twice with the seats swapped, so the luck of the deal
   cancels out.
@@ -92,7 +92,7 @@ work and again at equal thinking time.
 Not everything worked. Valuing the end of a round by **sampling next-round
 deals** and searching each a few moves deep lost 10–50 Elo at equal work in
 every configuration tried, so it is off by default
-([search/lookahead.go](../search/lookahead.go)).
+([search/lookahead.go](../internal/search/lookahead.go)).
 
 ## 5. Checking that it is right
 
@@ -107,7 +107,7 @@ every configuration tried, so it is off by default
 
 ## 6. One engine, two homes
 
-The request layer ([api/](../api)) knows nothing about HTTP. The native binary
+The request layer ([api/](../internal/api)) knows nothing about HTTP. The native binary
 wraps it in a web server with limits for public use; the browser build
 ([cmd/wasm](../cmd/wasm)) wraps the same code as WebAssembly and runs it in a
 Web Worker. The page talks to both the same way, so a position analysed online

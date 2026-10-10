@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/rand/v2"
 
-	"github.com/tusk80/azul-engine/eval"
+	"github.com/tusk80/azul-engine/internal/eval"
 )
 
 // SPSA tunes eval weights by simultaneous perturbation: each iteration

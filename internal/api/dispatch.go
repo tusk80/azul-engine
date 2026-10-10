@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/tusk80/azul-engine/search"
+	"github.com/tusk80/azul-engine/internal/search"
 )
 
 // Limits bound the search time a caller may ask for.

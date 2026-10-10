@@ -70,7 +70,7 @@ To update: copy the new binary over `/opt/azul/azul` and
 ## Docker
 
 ```bash
-docker build -t azul .
+docker build -t azul -f deploy/Dockerfile .
 docker run -d --name azul --restart unless-stopped -p 127.0.0.1:8080:8080 azul
 ```
 

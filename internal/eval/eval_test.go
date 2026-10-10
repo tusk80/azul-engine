@@ -4,7 +4,7 @@ import (
 	"math/rand/v2"
 	"testing"
 
-	"github.com/tusk80/azul-engine/game"
+	"github.com/tusk80/azul-engine/internal/game"
 )
 
 func wallOf(rows ...string) game.Wall {

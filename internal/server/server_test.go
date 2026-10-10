@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tusk80/azul-engine/api"
-	"github.com/tusk80/azul-engine/game"
+	"github.com/tusk80/azul-engine/internal/api"
+	"github.com/tusk80/azul-engine/internal/game"
 )
 
 func newTestServer() *Server {
@@ -26,7 +26,7 @@ func post(t *testing.T, h http.Handler, body string) *httptest.ResponseRecorder 
 }
 
 func TestBestMove(t *testing.T) {
-	state, err := os.ReadFile("../testdata/midround.json")
+	state, err := os.ReadFile("../../testdata/midround.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestApplyPlaysAWholeRound(t *testing.T) {
 
 func TestApplyRejects(t *testing.T) {
 	h := newTestServer()
-	state, _ := os.ReadFile("../testdata/midround.json")
+	state, _ := os.ReadFile("../../testdata/midround.json")
 	for _, moves := range []string{`["F1 red->1"]`, `["score"]`, `["deal"]`, `["nonsense"]`} {
 		rec := postTo(t, h, "/apply", `{"state":`+string(state)+`,"moves":`+moves+`}`)
 		if rec.Code != http.StatusBadRequest {
@@ -193,7 +193,7 @@ func TestSecurityHeaders(t *testing.T) {
 
 func TestMoveTimeIsCapped(t *testing.T) {
 	s := New(Config{HashMB: 16, MaxMoveTime: 100 * time.Millisecond})
-	state, _ := os.ReadFile("../testdata/opening.json")
+	state, _ := os.ReadFile("../../testdata/opening.json")
 	start := time.Now()
 	rec := post(t, s, `{"state":`+string(state)+`,"timeMs":20000}`)
 	if rec.Code != http.StatusOK {
@@ -208,7 +208,7 @@ func TestBusyReturns503(t *testing.T) {
 	s := New(Config{HashMB: 1, QueueWait: 20 * time.Millisecond})
 	eng := <-s.engines // someone else is searching
 	defer func() { s.engines <- eng }()
-	state, _ := os.ReadFile("../testdata/midround.json")
+	state, _ := os.ReadFile("../../testdata/midround.json")
 	rec := post(t, s, `{"state":`+string(state)+`}`)
 	if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") == "" {
 		t.Fatalf("status %d, want 503 with Retry-After: %s", rec.Code, rec.Body)
@@ -217,7 +217,7 @@ func TestBusyReturns503(t *testing.T) {
 
 func TestSearchRateLimit(t *testing.T) {
 	s := New(Config{HashMB: 16, MoveTime: 5 * time.Millisecond, SearchesPerMinute: 6}) // burst of 5
-	state, _ := os.ReadFile("../testdata/midround.json")
+	state, _ := os.ReadFile("../../testdata/midround.json")
 	body := `{"state":` + string(state) + `}`
 	send := func(addr string) int {
 		req := httptest.NewRequest(http.MethodPost, "/bestmove", strings.NewReader(body))

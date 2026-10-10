@@ -337,7 +337,7 @@ func TestJSONRoundTrip(t *testing.T) {
 }
 
 func TestJSONTestdataMatchesScenario(t *testing.T) {
-	data, err := os.ReadFile("../testdata/opening.json")
+	data, err := os.ReadFile("../../testdata/opening.json")
 	if err != nil {
 		t.Fatal(err)
 	}

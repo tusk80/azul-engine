@@ -2,7 +2,7 @@
 # Builds the static site: the analysis board plus the engine compiled to
 # WebAssembly. The result needs no server, only a static host.
 #
-#   bash scripts/build-site.sh [output-dir]     (default: site)
+#   bash hosting/build-site.sh [output-dir]     (default: site)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -10,7 +10,7 @@ out=${1:-site}
 rm -rf "$out"
 mkdir -p "$out"
 
-cp server/ui/* "$out"/
+cp internal/server/ui/* "$out"/
 # Tell the page its engine is the WebAssembly one, so it does not look for a server.
 sed -i 's/<html lang="en">/<html lang="en" data-engine="wasm">/' "$out/index.html"
 grep -q 'data-engine="wasm"' "$out/index.html"

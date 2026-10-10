@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tusk80/azul-engine/eval"
-	"github.com/tusk80/azul-engine/game"
+	"github.com/tusk80/azul-engine/internal/eval"
+	"github.com/tusk80/azul-engine/internal/game"
 )
 
 // brute is plain negamax to the end of the round: no pruning, no TT.

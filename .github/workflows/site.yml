@@ -26,7 +26,7 @@ jobs:
       - name: Test
         run: go test ./...
       - name: Build site
-        run: bash scripts/build-site.sh site
+        run: bash hosting/build-site.sh site
       # Layout of the pages branch: wrangler.jsonc at the root, the site in
       # public/. Cloudflare deploys it with "npx wrangler deploy"; any other
       # static host can serve public/ directly.

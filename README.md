@@ -61,7 +61,7 @@ go build -o azul ./cmd/azul
 each visitor's browser, so any static host works:
 
 ```bash
-bash scripts/build-site.sh    # writes site/
+bash hosting/build-site.sh    # writes site/
 ```
 
 The `Site` workflow does this on every push and publishes the result to the
@@ -155,18 +155,20 @@ of the next round beyond its evaluation: an experimental sampling lookahead
 ## Layout
 
 ```
-game/        rules, move generation, scoring, hashing, JSON, ASCII board
-api/         requests and responses, shared by the server and the browser build
-search/      alpha-beta (PVS), iterative deepening, transposition table
-eval/        evaluation terms and weights
-selfplay/    parallel matches and SPSA tuning
-server/      HTTP API, limits, and the analysis board (server/ui, embedded)
 cmd/azul/    CLI
 cmd/wasm/    the engine for the browser (WebAssembly)
-scripts/     build-site.sh: the static site
-hosting/     headers and Cloudflare config for the static site
+internal/
+  game/      rules, move generation, scoring, hashing, JSON, ASCII board
+  search/    alpha-beta (PVS), iterative deepening, transposition table
+  eval/      evaluation terms and weights
+  selfplay/  parallel matches and SPSA tuning
+  api/       requests and responses, shared by the server and the browser build
+  server/    HTTP API, limits, and the analysis board (server/ui, embedded)
+hosting/     build script, headers and Cloudflare config for the static site
+deploy/      Dockerfile, systemd unit and Caddyfile for self-hosting
 userscript/  Tampermonkey overlay for buddyboardgames.com
-deploy/      systemd unit and Caddyfile
+weights/     tuned evaluation weights
+testdata/    example positions
 ```
 
 ## License

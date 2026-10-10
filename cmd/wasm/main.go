@@ -12,8 +12,8 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/tusk80/azul-engine/api"
-	"github.com/tusk80/azul-engine/search"
+	"github.com/tusk80/azul-engine/internal/api"
+	"github.com/tusk80/azul-engine/internal/search"
 )
 
 func main() {

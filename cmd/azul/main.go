@@ -21,11 +21,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tusk80/azul-engine/eval"
-	"github.com/tusk80/azul-engine/game"
-	"github.com/tusk80/azul-engine/search"
-	"github.com/tusk80/azul-engine/selfplay"
-	"github.com/tusk80/azul-engine/server"
+	"github.com/tusk80/azul-engine/internal/eval"
+	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/search"
+	"github.com/tusk80/azul-engine/internal/selfplay"
+	"github.com/tusk80/azul-engine/internal/server"
 )
 
 const usage = `usage:

@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/tusk80/azul-engine/eval"
+	"github.com/tusk80/azul-engine/internal/eval"
 )
 
 func TestMatchIsDeterministic(t *testing.T) {

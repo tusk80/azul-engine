@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tusk80/azul-engine/game"
-	"github.com/tusk80/azul-engine/search"
+	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/search"
 )
 
 func midround(t *testing.T) json.RawMessage {
 	t.Helper()
-	data, err := os.ReadFile("../testdata/midround.json")
+	data, err := os.ReadFile("../../testdata/midround.json")
 	if err != nil {
 		t.Fatal(err)
 	}

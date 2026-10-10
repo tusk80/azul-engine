@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/bits"
 
-	"github.com/tusk80/azul-engine/game"
+	"github.com/tusk80/azul-engine/internal/game"
 )
 
 const (

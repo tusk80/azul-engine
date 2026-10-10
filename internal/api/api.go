@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tusk80/azul-engine/eval"
-	"github.com/tusk80/azul-engine/game"
-	"github.com/tusk80/azul-engine/search"
+	"github.com/tusk80/azul-engine/internal/eval"
+	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/search"
 )
 
 // Error is a request that cannot be answered; Status is an HTTP status code.

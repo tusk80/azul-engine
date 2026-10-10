@@ -11,9 +11,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/tusk80/azul-engine/api"
-	"github.com/tusk80/azul-engine/eval"
-	"github.com/tusk80/azul-engine/search"
+	"github.com/tusk80/azul-engine/internal/api"
+	"github.com/tusk80/azul-engine/internal/eval"
+	"github.com/tusk80/azul-engine/internal/search"
 )
 
 const maxBody = 1 << 20
