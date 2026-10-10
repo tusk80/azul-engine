@@ -74,8 +74,8 @@ third as fast as the native binary.
 
 **As a server.** `azul serve -public` adds the limits a public server needs: a
 2-second cap per search, several engines, per-visitor rate limits and
-same-origin-only API access. See [docs/DEPLOY.md](docs/DEPLOY.md) for systemd,
-Caddy, Cloudflare and Docker.
+same-origin-only API access. Put it behind a reverse proxy that adds HTTPS, and
+pass `-ip-header` so rate limits are per visitor.
 
 ## Browser overlay (buddyboardgames.com)
 
@@ -165,7 +165,6 @@ internal/
   api/       requests and responses, shared by the server and the browser build
   server/    HTTP API, limits, and the analysis board (server/ui, embedded)
 hosting/     build script, headers and Cloudflare config for the static site
-deploy/      Dockerfile, systemd unit and Caddyfile for self-hosting
 userscript/  Tampermonkey overlay for buddyboardgames.com
 weights/     tuned evaluation weights
 testdata/    example positions
