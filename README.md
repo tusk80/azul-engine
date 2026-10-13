@@ -88,6 +88,8 @@ pass `-ip-header` so rate limits are per visitor.
 5. **Analyze this position** (or **Alt+S**) opens the current position in the
    analysis board, on either player's turn. This part works without the local
    engine: the position travels in the link itself.
+6. **Alt+C** switches to casual play: the suggestion is what is best for your
+   own board, and it stops taking tiles just to hurt the opponent.
 
 The script reads the page's own game object and only talks to `127.0.0.1`.
 
@@ -113,7 +115,7 @@ knows about it. Using an engine against people who don't know is cheating.
 
 | Endpoint | Body | Returns |
 |---|---|---|
-| `POST /bestmove` | `{"state": {...}, "timeMs": 1000, "multiPV": 3}` | Best move with its effect (points, floor penalty, bonus), `eval` in points for the side to move, `outcome` once the game is decided, the line of play (`pv`), alternatives, and a one-line `reason`. |
+| `POST /bestmove` | `{"state": {...}, "timeMs": 1000, "multiPV": 3}` | Best move with its effect (points, floor penalty, bonus), `eval` in points for the side to move, `outcome` once the game is decided, the line of play (`pv`), alternatives, and a one-line `reason`. Add `"style": "casual"` for a relaxed move: best for the mover's own board, one move ahead, ignoring the opponent. |
 | `POST /apply` | `{"state": {...}, "moves": ["F2 red->3", "score", "deal"]}` | Checks a position (no moves) or plays a line, returning every position on the way. |
 | `POST /new` | `{"seed": 0}` | A freshly dealt game. |
 | `GET /health` | | `{"status":"ok"}` |

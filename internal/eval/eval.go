@@ -137,6 +137,19 @@ func (w *Weights) Evaluate(s *game.State, p int) int {
 	return v
 }
 
+// Own values s for player p alone: their score after this round and their
+// board, with nothing about the opponent.
+func (w *Weights) Own(s *game.State, p int) int {
+	c := *s
+	c.ProjectRound()
+	pb := &c.Players[p]
+	v := int(pb.Score)*Scale + w.board(pb)
+	if !s.RoundOver() {
+		v += w.Overflow*overflow(s, p) + w.Completable*completable(s, p)
+	}
+	return v
+}
+
 // board scores one player's projected board: partial lines, wall shape and
 // bonus proximity.
 func (w *Weights) board(pb *game.PlayerBoard) int {

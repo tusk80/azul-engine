@@ -62,7 +62,14 @@ func dispatch(eng *search.Searcher, lim Limits, path string, body []byte) (any, 
 		if err != nil {
 			return nil, err
 		}
-		return BestMove(eng, &st, req.Options(lim.MoveTime, lim.MaxMoveTime))
+		opt := req.Options(lim.MoveTime, lim.MaxMoveTime)
+		switch req.Style {
+		case "":
+			return BestMove(eng, &st, opt)
+		case "casual":
+			return Casual(eng, &st, opt.MultiPV)
+		}
+		return nil, badRequest("style: unknown %q", req.Style)
 	case "/apply":
 		var req ApplyRequest
 		if err := decode(&req); err != nil {

@@ -56,6 +56,34 @@ func TestBestMove(t *testing.T) {
 	}
 }
 
+// Casual plays for its own board: from the opening it builds a line, and it
+// does not give up points to hurt the opponent.
+func TestCasual(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/opening.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(BestMoveRequest{State: data, Style: "casual"})
+	status, out := Dispatch(search.New(1), Limits{MoveTime: time.Second, MaxMoveTime: time.Second}, "/bestmove", body)
+	var resp BestMoveResponse
+	if err := json.Unmarshal(out, &resp); err != nil || status != 200 {
+		t.Fatalf("status %d: %s", status, out)
+	}
+	if len(resp.Lines) != 3 || resp.Move.Floor || resp.Move.Effect.ToFloor > 0 || resp.Move.Effect.Token {
+		t.Fatalf("casual opening move %q should build a line and take no penalty", resp.Move.Text)
+	}
+	for i := 1; i < len(resp.Lines); i++ {
+		if resp.Lines[i].Eval > resp.Lines[i-1].Eval {
+			t.Fatalf("lines not sorted best first: %+v", resp.Lines)
+		}
+	}
+
+	body, _ = json.Marshal(BestMoveRequest{State: data, Style: "nope"})
+	if status, _ := Dispatch(search.New(1), Limits{}, "/bestmove", body); status != 400 {
+		t.Fatalf("unknown style: status %d, want 400", status)
+	}
+}
+
 func TestErrorsCarryAStatus(t *testing.T) {
 	status := func(err error) int {
 		var e *Error

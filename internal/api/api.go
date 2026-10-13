@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ type BestMoveRequest struct {
 	TimeMs  int             `json:"timeMs"`  // 0 = the default
 	Depth   int             `json:"depth"`   // 0 = no limit
 	MultiPV int             `json:"multiPV"` // 0 = 3
+	Style   string          `json:"style"`   // "" = play to win; "casual" = see Casual
 }
 
 // Options turns the request into search options, using def when the request
@@ -108,7 +110,31 @@ type BestMoveResponse struct {
 
 // BestMove searches st with eng and describes the result.
 func BestMove(eng *search.Searcher, st *game.State, opt search.Options) (*BestMoveResponse, error) {
-	res := eng.Search(st, opt)
+	return describe(st, eng.Search(st, opt))
+}
+
+// Casual answers like BestMove but plays the way a relaxed human does: it
+// picks what is best for the mover's own board and ignores the opponent, so
+// it never takes tiles just to deny them or to force floor drops.
+//
+// shortcut: looks one move ahead only, so it can walk into a bad end of
+// round; search with both sides playing for themselves if it should be stronger.
+func Casual(eng *search.Searcher, st *game.State, multiPV int) (*BestMoveResponse, error) {
+	var ml game.MoveList
+	st.GenMoves(&ml)
+	me := int(st.ToMove)
+	res := search.Result{Depth: 1}
+	for _, m := range ml.Slice() {
+		c := *st
+		c.Apply(m)
+		res.Lines = append(res.Lines, search.Line{Move: m, Score: eng.Weights.Own(&c, me), PV: []game.Move{m}})
+	}
+	sort.SliceStable(res.Lines, func(i, j int) bool { return res.Lines[i].Score > res.Lines[j].Score })
+	res.Lines = res.Lines[:min(len(res.Lines), multiPV)]
+	return describe(st, res)
+}
+
+func describe(st *game.State, res search.Result) (*BestMoveResponse, error) {
 	if len(res.Lines) == 0 {
 		return nil, &Error{Status: statusNoMoves, Msg: "no legal moves: the round or game is over"}
 	}
