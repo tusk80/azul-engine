@@ -106,6 +106,7 @@ knows about it. Using an engine against people who don't know is cheating.
 | `azul show state.json` | Print the board and every legal move. |
 | `azul selfplay -a W -b W` | Engine-vs-engine match; each deal is played twice with seats swapped. |
 | `azul tune -from W` | Tune evaluation weights with SPSA self-play. |
+| `azul gendata -games N` | Self-play positions as a CSV of features and outcomes, the training data for a learned evaluation. |
 | `azul perft state.json 5` | Count move sequences (move generator check and speed test). |
 | `azul random -seed 7` | Play a random game and print each round. |
 

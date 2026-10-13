@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -21,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tusk80/azul-engine/internal/dataset"
 	"github.com/tusk80/azul-engine/internal/eval"
 	"github.com/tusk80/azul-engine/internal/game"
 	"github.com/tusk80/azul-engine/internal/search"
@@ -41,6 +43,8 @@ const usage = `usage:
   azul tune [-from W] [-iters 300] [-pairs 16] [-nodes 5000] [-out tuned.json]
                                      tune eval weights with SPSA
   (W = "default", "zero", or a weights JSON file)
+  azul gendata [-games 1000] [-nodes 20000] [-out data.csv]
+                                     self-play positions as training data
   azul show <state.json|->           print the board and legal moves
   azul perft <state.json|-> <depth>  count move sequences (stops at round end)
   azul random [-seed N] [-json]      play a random game, printing each round`
@@ -68,6 +72,8 @@ func main() {
 		err = cmdAnalyze(os.Args[2:])
 	case "selfplay":
 		err = cmdSelfplay(os.Args[2:])
+	case "gendata":
+		err = cmdGendata(os.Args[2:])
 	case "tune":
 		err = cmdTune(os.Args[2:])
 	case "serve":
@@ -448,6 +454,60 @@ func cmdTune(args []string) error {
 	}
 	fmt.Printf("wrote %s\n", *out)
 	return save(w)
+}
+
+// cmdGendata writes self-play positions as CSV: the feature columns, then
+// the search's eval, the final score margin and the result.
+func cmdGendata(args []string) error {
+	fs := flag.NewFlagSet("gendata", flag.ContinueOnError)
+	games := fs.Int("games", 1000, "games to play")
+	nodes := fs.Uint64("nodes", 20000, "node budget per move")
+	seed := fs.Uint64("seed", 1, "first deal seed")
+	explore := fs.Float64("explore", 0.05, "chance of a random move, for variety")
+	workers := fs.Int("workers", runtime.NumCPU(), "parallel games")
+	out := fs.String("out", "data.csv", "output file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	f, err := os.Create(*out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	fmt.Fprintln(w, strings.Join(append(dataset.Names(), "eval", "margin", "result"), ","))
+
+	start := time.Now()
+	next := make(chan uint64)
+	done := make(chan []dataset.Row)
+	for range *workers {
+		go func() {
+			eng := search.New(16)
+			for s := range next {
+				eng.Clear()
+				done <- dataset.Game(eng, s, *nodes, *explore)
+			}
+		}()
+	}
+	go func() {
+		for g := range *games {
+			next <- *seed + uint64(g)
+		}
+		close(next)
+	}()
+	total := 0
+	for range *games {
+		for _, r := range <-done {
+			for _, v := range r.Features {
+				w.WriteString(strconv.Itoa(int(v)))
+				w.WriteByte(',')
+			}
+			fmt.Fprintf(w, "%d,%d,%d\n", r.Eval, r.Margin, r.Result)
+			total++
+		}
+	}
+	fmt.Printf("%d positions from %d games in %s -> %s\n", total, *games, time.Since(start).Round(time.Second), *out)
+	return w.Flush()
 }
 
 func formatPV(pv []game.Move) string {
