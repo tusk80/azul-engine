@@ -85,11 +85,17 @@ azul train -data ml/data.csv -h1 64 -h2 16 -out net.json
 azul selfplay -a-net net.json -b default -pairs 1500 -time 40ms
 ```
 
-The trained 64×16 network is [weights/net-64x16.json](../weights/net-64x16.json).
+The trained 64×16 network ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
+
+## Where it is used
+
+The network is the default brain on the analysis board and in the overlay;
+the classic evaluation stays one click away. The site's
+[Neural vs classic](https://azul.yesil.cc/compare.html) page shows these
+results as charts.
 
 ## Next
 
-- Make the network the default in the analysis board and the overlay.
 - Faster inference (integer weights, updating the first layer incrementally
   as moves are made, as chess engines do) to afford a bigger network.
 - Train again on games played by the network itself.

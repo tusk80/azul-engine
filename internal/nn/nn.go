@@ -4,11 +4,13 @@
 package nn
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand/v2"
 	"os"
+	"sync"
 
 	"github.com/tusk80/azul-engine/internal/dataset"
 	"github.com/tusk80/azul-engine/internal/eval"
@@ -144,12 +146,29 @@ func (n *Net) Save(path string) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+//go:embed default-net.json
+var defaultNet []byte
+
+// Default is the network the engine ships with: 64x16, trained on 1.5
+// million self-play positions (see docs/ML.md).
+var Default = sync.OnceValue(func() *Net {
+	n, err := parse(defaultNet, "default-net.json")
+	if err != nil {
+		panic(err)
+	}
+	return n
+})
+
 // Load reads a network written by Save (or by the PyTorch trainer).
 func Load(path string) (*Net, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	return parse(data, path)
+}
+
+func parse(data []byte, path string) (*Net, error) {
 	var n Net
 	if err := json.Unmarshal(data, &n); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)

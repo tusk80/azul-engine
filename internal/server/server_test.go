@@ -54,6 +54,26 @@ func TestBestMove(t *testing.T) {
 	}
 }
 
+// The style and engine fields reach the engine over HTTP too.
+func TestBestMoveChoices(t *testing.T) {
+	state, err := os.ReadFile("../../testdata/midround.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := newTestServer()
+	for _, tc := range []struct{ extra, want string }{
+		{`"engine":"neural"`, "neural"},
+		{`"style":"casual"`, "casual"},
+		{`"engine":"classic"`, "classic"},
+	} {
+		rec := post(t, srv, `{"state":`+string(state)+`,"timeMs":100,`+tc.extra+`}`)
+		var resp api.BestMoveResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil || rec.Code != 200 || resp.Engine != tc.want {
+			t.Fatalf("%s: status %d, engine %q: %s", tc.extra, rec.Code, resp.Engine, rec.Body)
+		}
+	}
+}
+
 func TestBestMoveErrors(t *testing.T) {
 	h := newTestServer()
 	tests := map[string]struct {

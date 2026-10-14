@@ -5,6 +5,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/tusk80/azul-engine/internal/eval"
 	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/nn"
 	"github.com/tusk80/azul-engine/internal/search"
 )
 
@@ -53,6 +55,39 @@ type BestMoveRequest struct {
 	Depth   int             `json:"depth"`   // 0 = no limit
 	MultiPV int             `json:"multiPV"` // 0 = 3
 	Style   string          `json:"style"`   // "" = play to win; "casual" = see Casual
+	Engine  string          `json:"engine"`  // "classic" (default) or "neural"
+}
+
+// The evaluations a request may choose.
+const (
+	EngineClassic = "classic" // hand-written terms, tuned by self-play
+	EngineNeural  = "neural"  // the trained network, nn.Default
+)
+
+// UseEngine switches eng to the named evaluation, clearing what it learned
+// with the other one: their values are not comparable.
+func UseEngine(eng *search.Searcher, name string) error {
+	if name == "" {
+		name = EngineClassic
+	}
+	cur := eng.EvalName
+	if cur == "" {
+		cur = EngineClassic
+	}
+	if name == cur {
+		return nil
+	}
+	switch name {
+	case EngineClassic:
+		eng.Eval = nil
+	case EngineNeural:
+		eng.Eval = nn.Default().Evaluator().Evaluate
+	default:
+		return badRequest("engine: unknown %q (want %q or %q)", name, EngineClassic, EngineNeural)
+	}
+	eng.EvalName = name
+	eng.Clear()
+	return nil
 }
 
 // Options turns the request into search options, using def when the request
@@ -100,6 +135,7 @@ type Line struct {
 
 type BestMoveResponse struct {
 	Line
+	Engine string `json:"engine"` // which evaluation chose the move
 	Reason string `json:"reason"`
 	Lines  []Line `json:"lines"`
 	Depth  int    `json:"depth"`
@@ -108,9 +144,28 @@ type BestMoveResponse struct {
 	TimeMs int64  `json:"timeMs"`
 }
 
+// Answer runs a best-move request on st with eng, in the style and with the
+// engine the request names. The HTTP server and Dispatch both use it.
+func (r *BestMoveRequest) Answer(eng *search.Searcher, st *game.State, opt search.Options) (*BestMoveResponse, error) {
+	switch r.Style {
+	case "":
+		if err := UseEngine(eng, r.Engine); err != nil {
+			return nil, err
+		}
+		return BestMove(eng, st, opt)
+	case "casual":
+		return Casual(eng, st, opt.MultiPV)
+	}
+	return nil, badRequest("style: unknown %q", r.Style)
+}
+
 // BestMove searches st with eng and describes the result.
 func BestMove(eng *search.Searcher, st *game.State, opt search.Options) (*BestMoveResponse, error) {
-	return describe(st, eng.Search(st, opt))
+	resp, err := describe(st, eng.Search(st, opt))
+	if resp != nil {
+		resp.Engine = cmp.Or(eng.EvalName, EngineClassic)
+	}
+	return resp, err
 }
 
 // Casual answers like BestMove but plays the way a relaxed human does: it
@@ -131,7 +186,11 @@ func Casual(eng *search.Searcher, st *game.State, multiPV int) (*BestMoveRespons
 	}
 	sort.SliceStable(res.Lines, func(i, j int) bool { return res.Lines[i].Score > res.Lines[j].Score })
 	res.Lines = res.Lines[:min(len(res.Lines), multiPV)]
-	return describe(st, res)
+	resp, err := describe(st, res)
+	if resp != nil {
+		resp.Engine = "casual"
+	}
+	return resp, err
 }
 
 func describe(st *game.State, res search.Result) (*BestMoveResponse, error) {

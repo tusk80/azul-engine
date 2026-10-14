@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neural vs Classic — Azul Engine</title>
+  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +64 Elo at equal time.">
+  <meta name="theme-color" content="#0f766e">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Neural network vs classic: which Azul engine is stronger?">
+  <meta property="og:description" content="A small network trained on self-play beats the hand-tuned engine: 59% of 3,000 games at equal thinking time.">
+  <meta property="og:url" content="https://azul.yesil.cc/compare.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Neural vs classic</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+
+  <main class="cmp-main">
+    <section class="cmp-hero">
+      <p class="eyebrow">Two brains, one search</p>
+      <h1>The neural network wins.</h1>
+      <p class="lede">The engine can judge positions two ways: with <strong>classic</strong> rules written and tuned by hand,
+        or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself.
+        We had them play each other 3,000 times, with the same thinking time.</p>
+      <div class="stats">
+        <div class="stat"><span class="num">+64</span><span class="lbl">Elo at equal thinking time<br><small>± 13, 3,000 games</small></span></div>
+        <div class="stat"><span class="num">59%</span><span class="lbl">of the points won<br><small>1,757 wins, 1,212 losses</small></span></div>
+        <div class="stat"><span class="num">+4.5</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
+        <div class="stat"><span class="num">+110</span><span class="lbl">Elo with 200 ms per move<br><small>± 35, 400 games</small></span></div>
+      </div>
+    </section>
+
+    <section class="cmp-card">
+      <h2>3,000 games, same clock</h2>
+      <p>Every deal was played twice with the seats swapped, so neither side got the luckier tiles. 40 ms per move.</p>
+      <svg class="chart" viewBox="0 0 640 28" role="img" aria-label="share of games">
+<g class="bar neural"><title>Neural network wins: 1,757 of 3,000 games (58.6%)</title><rect x="0.0" y="0" width="372.5" height="28" rx="4"/></g>
+<g class="bar draw"><title>Shared wins: 31 of 3,000 games (1.0%)</title><rect x="374.5" y="0" width="6.6" height="28" rx="0"/></g>
+<g class="bar classic"><title>Classic wins: 1,212 of 3,000 games (40.4%)</title><rect x="383.1" y="0" width="256.9" height="28" rx="4"/></g>
+</svg>
+      <ul class="legend">
+        <li><span class="sw neural"></span>Neural network won <b>1,757</b></li>
+        <li><span class="sw draw"></span>Shared <b>31</b></li>
+        <li><span class="sw classic"></span>Classic won <b>1,212</b></li>
+      </ul>
+    </section>
+
+    <section class="cmp-card">
+      <h2>More time, bigger lead</h2>
+      <p>The network judges better but each judgement costs more, so it looks at fewer positions. The longer both sides think, the more the better judgement counts. Elo over the classic engine; lines show the 95% range.</p>
+      <svg class="chart" viewBox="0 0 640 96" role="img" aria-label="bar chart">
+<line class="zero" x1="150.0" x2="150.0" y1="0" y2="74"/>
+<text class="tick" x="150.0" y="90" text-anchor="middle">0</text>
+<line class="grid" x1="290.0" x2="290.0" y1="0" y2="74"/>
+<text class="tick" x="290.0" y="90" text-anchor="middle">+50</text>
+<line class="grid" x1="430.0" x2="430.0" y1="0" y2="74"/>
+<text class="tick" x="430.0" y="90" text-anchor="middle">+100</text>
+<line class="grid" x1="570.0" x2="570.0" y1="0" y2="74"/>
+<text class="tick" x="570.0" y="90" text-anchor="middle">+150</text>
+<text class="rowlabel" x="138" y="21.0" text-anchor="end">40 ms per move</text>
+<g class="bar neural"><title>40 ms per move, 3,000 games: +64 ± 13 Elo</title>
+<rect x="150.0" y="8" width="179.2" height="16" rx="4"/>
+<rect x="150.0" y="8" width="6" height="16"/>
+<line class="err" x1="292.8" x2="365.6" y1="16.0" y2="16.0"/><line class="err" x1="292.8" x2="292.8" y1="11.0" y2="21.0"/><line class="err" x1="365.6" x2="365.6" y1="11.0" y2="21.0"/>
+<text class="val" x="373.6" y="21" text-anchor="start">+64</text></g>
+<text class="rowlabel" x="138" y="55.0" text-anchor="end">200 ms per move</text>
+<g class="bar neural"><title>200 ms per move, 400 games: +110 ± 35 Elo</title>
+<rect x="150.0" y="42" width="308.0" height="16" rx="4"/>
+<rect x="150.0" y="42" width="6" height="16"/>
+<line class="err" x1="360.0" x2="556.0" y1="50.0" y2="50.0"/><line class="err" x1="360.0" x2="360.0" y1="45.0" y2="55.0"/><line class="err" x1="556.0" x2="556.0" y1="45.0" y2="55.0"/>
+<text class="val" x="564.0" y="55" text-anchor="start">+110</text></g>
+</svg>
+    </section>
+
+    <section class="cmp-grid">
+      <div class="cmp-card">
+        <h2>Smaller is stronger</h2>
+        <p>A bigger network knows more (equal positions) but is too slow to use it (equal time). 64 × 16 is the sweet spot, and the one the board uses.</p>
+        <svg class="chart" viewBox="0 0 640 190" role="img" aria-label="bar chart">
+<line class="zero" x1="150.0" x2="150.0" y1="0" y2="168"/>
+<text class="tick" x="150.0" y="184" text-anchor="middle">0</text>
+<line class="grid" x1="255.0" x2="255.0" y1="0" y2="168"/>
+<text class="tick" x="255.0" y="184" text-anchor="middle">+50</text>
+<line class="grid" x1="360.0" x2="360.0" y1="0" y2="168"/>
+<text class="tick" x="360.0" y="184" text-anchor="middle">+100</text>
+<line class="grid" x1="465.0" x2="465.0" y1="0" y2="168"/>
+<text class="tick" x="465.0" y="184" text-anchor="middle">+150</text>
+<line class="grid" x1="570.0" x2="570.0" y1="0" y2="168"/>
+<text class="tick" x="570.0" y="184" text-anchor="middle">+200</text>
+<text class="rowlabel" x="138" y="31.0" text-anchor="end">32 × 16</text>
+<g class="bar know"><title>32 × 16, equal positions: +96 ± 25 Elo</title>
+<rect x="150.0" y="8" width="201.6" height="16" rx="4"/>
+<rect x="150.0" y="8" width="6" height="16"/>
+<line class="err" x1="299.1" x2="404.1" y1="16.0" y2="16.0"/><line class="err" x1="299.1" x2="299.1" y1="11.0" y2="21.0"/><line class="err" x1="404.1" x2="404.1" y1="11.0" y2="21.0"/>
+<text class="val" x="412.1" y="21" text-anchor="start">+96</text></g>
+<g class="bar neural"><title>32 × 16, equal time: +62 ± 24 Elo</title>
+<rect x="150.0" y="28" width="130.2" height="16" rx="4"/>
+<rect x="150.0" y="28" width="6" height="16"/>
+<line class="err" x1="229.8" x2="330.6" y1="36.0" y2="36.0"/><line class="err" x1="229.8" x2="229.8" y1="31.0" y2="41.0"/><line class="err" x1="330.6" x2="330.6" y1="31.0" y2="41.0"/>
+<text class="val" x="338.6" y="41" text-anchor="start">+62</text></g>
+<text class="rowlabel" x="138" y="85.0" text-anchor="end">64 × 16</text>
+<g class="bar know"><title>64 × 16, equal positions: +114 ± 25 Elo</title>
+<rect x="150.0" y="62" width="239.4" height="16" rx="4"/>
+<rect x="150.0" y="62" width="6" height="16"/>
+<line class="err" x1="336.9" x2="441.9" y1="70.0" y2="70.0"/><line class="err" x1="336.9" x2="336.9" y1="65.0" y2="75.0"/><line class="err" x1="441.9" x2="441.9" y1="65.0" y2="75.0"/>
+<text class="val" x="449.9" y="75" text-anchor="start">+114</text></g>
+<g class="bar neural"><title>64 × 16, equal time: +64 ± 13 Elo</title>
+<rect x="150.0" y="82" width="134.4" height="16" rx="4"/>
+<rect x="150.0" y="82" width="6" height="16"/>
+<line class="err" x1="257.1" x2="311.7" y1="90.0" y2="90.0"/><line class="err" x1="257.1" x2="257.1" y1="85.0" y2="95.0"/><line class="err" x1="311.7" x2="311.7" y1="85.0" y2="95.0"/>
+<text class="val" x="319.7" y="95" text-anchor="start">+64</text></g>
+<text class="rowlabel" x="138" y="139.0" text-anchor="end">128 × 32</text>
+<g class="bar know"><title>128 × 32, equal positions: +141 ± 13 Elo</title>
+<rect x="150.0" y="116" width="296.1" height="16" rx="4"/>
+<rect x="150.0" y="116" width="6" height="16"/>
+<line class="err" x1="418.8" x2="473.4" y1="124.0" y2="124.0"/><line class="err" x1="418.8" x2="418.8" y1="119.0" y2="129.0"/><line class="err" x1="473.4" x2="473.4" y1="119.0" y2="129.0"/>
+<text class="val" x="481.4" y="129" text-anchor="start">+141</text></g>
+<g class="bar neural"><title>128 × 32, equal time: +6 ± 24 Elo</title>
+<rect x="150.0" y="136" width="12.6" height="16" rx="4"/>
+<rect x="150.0" y="136" width="6" height="16"/>
+<line class="err" x1="150.0" x2="213.0" y1="144.0" y2="144.0"/><line class="err" x1="150.0" x2="150.0" y1="139.0" y2="149.0"/><line class="err" x1="213.0" x2="213.0" y1="139.0" y2="149.0"/>
+<text class="val" x="221.0" y="149" text-anchor="start">+6</text></g>
+</svg>
+        <ul class="legend">
+          <li><span class="sw know"></span>Equal positions: what it knows</li>
+          <li><span class="sw neural"></span>Equal time: how it plays</li>
+        </ul>
+      </div>
+      <div class="cmp-card">
+        <h2>What it sees matters most</h2>
+        <p>Given only the board, the network merely tied. Showing it the board <em>as it would look if the round were scored now</em> was worth 150 Elo.</p>
+        <svg class="chart" viewBox="0 0 640 96" role="img" aria-label="bar chart">
+<line class="grid" x1="150.0" x2="150.0" y1="0" y2="74"/>
+<text class="tick" x="150.0" y="90" text-anchor="middle">-50</text>
+<line class="zero" x1="234.0" x2="234.0" y1="0" y2="74"/>
+<text class="tick" x="234.0" y="90" text-anchor="middle">0</text>
+<line class="grid" x1="318.0" x2="318.0" y1="0" y2="74"/>
+<text class="tick" x="318.0" y="90" text-anchor="middle">+50</text>
+<line class="grid" x1="402.0" x2="402.0" y1="0" y2="74"/>
+<text class="tick" x="402.0" y="90" text-anchor="middle">+100</text>
+<line class="grid" x1="486.0" x2="486.0" y1="0" y2="74"/>
+<text class="tick" x="486.0" y="90" text-anchor="middle">+150</text>
+<line class="grid" x1="570.0" x2="570.0" y1="0" y2="74"/>
+<text class="tick" x="570.0" y="90" text-anchor="middle">+200</text>
+<text class="rowlabel" x="138" y="21.0" text-anchor="end">Board only</text>
+<g class="bar know"><title>Board only, equal positions: -7 ± 34 Elo</title>
+<rect x="222.2" y="8" width="11.8" height="16" rx="4"/>
+<rect x="228.0" y="8" width="6" height="16"/>
+<line class="err" x1="165.1" x2="279.4" y1="16.0" y2="16.0"/><line class="err" x1="165.1" x2="165.1" y1="11.0" y2="21.0"/><line class="err" x1="279.4" x2="279.4" y1="11.0" y2="21.0"/>
+<text class="val" x="157.1" y="21" text-anchor="end">-7</text></g>
+<text class="rowlabel" x="138" y="55.0" text-anchor="end">Board + scored now</text>
+<g class="bar neural"><title>Board + scored now, equal positions: +141 ± 13 Elo</title>
+<rect x="234.0" y="42" width="236.9" height="16" rx="4"/>
+<rect x="234.0" y="42" width="6" height="16"/>
+<line class="err" x1="449.0" x2="492.7" y1="50.0" y2="50.0"/><line class="err" x1="449.0" x2="449.0" y1="45.0" y2="55.0"/><line class="err" x1="492.7" x2="492.7" y1="45.0" y2="55.0"/>
+<text class="val" x="500.7" y="55" text-anchor="start">+141</text></g>
+</svg>
+        <h2 class="sub">What it learns from</h2>
+        <p>Learning half from the search's opinion and half from who actually won beat either alone.</p>
+        <svg class="chart" viewBox="0 0 640 164" role="img" aria-label="bar chart">
+<line class="grid" x1="150.0" x2="150.0" y1="0" y2="142"/>
+<text class="tick" x="150.0" y="158" text-anchor="middle">-200</text>
+<line class="grid" x1="234.0" x2="234.0" y1="0" y2="142"/>
+<text class="tick" x="234.0" y="158" text-anchor="middle">-150</text>
+<line class="grid" x1="318.0" x2="318.0" y1="0" y2="142"/>
+<text class="tick" x="318.0" y="158" text-anchor="middle">-100</text>
+<line class="grid" x1="402.0" x2="402.0" y1="0" y2="142"/>
+<text class="tick" x="402.0" y="158" text-anchor="middle">-50</text>
+<line class="zero" x1="486.0" x2="486.0" y1="0" y2="142"/>
+<text class="tick" x="486.0" y="158" text-anchor="middle">0</text>
+<line class="grid" x1="570.0" x2="570.0" y1="0" y2="142"/>
+<text class="tick" x="570.0" y="158" text-anchor="middle">+50</text>
+<text class="rowlabel" x="138" y="21.0" text-anchor="end">Search value only</text>
+<g class="bar know"><title>Search value only, : -127 ± 36 Elo</title>
+<rect x="272.6" y="8" width="213.4" height="16" rx="4"/>
+<rect x="480.0" y="8" width="6" height="16"/>
+<line class="err" x1="212.2" x2="333.1" y1="16.0" y2="16.0"/><line class="err" x1="212.2" x2="212.2" y1="11.0" y2="21.0"/><line class="err" x1="333.1" x2="333.1" y1="11.0" y2="21.0"/>
+<text class="val" x="204.2" y="21" text-anchor="end">-127</text></g>
+<text class="rowlabel" x="138" y="55.0" text-anchor="end">Outcome only</text>
+<g class="bar know"><title>Outcome only, : -84 ± 35 Elo</title>
+<rect x="344.9" y="42" width="141.1" height="16" rx="4"/>
+<rect x="480.0" y="42" width="6" height="16"/>
+<line class="err" x1="286.1" x2="403.7" y1="50.0" y2="50.0"/><line class="err" x1="286.1" x2="286.1" y1="45.0" y2="55.0"/><line class="err" x1="403.7" x2="403.7" y1="45.0" y2="55.0"/>
+<text class="val" x="278.1" y="55" text-anchor="end">-84</text></g>
+<text class="rowlabel" x="138" y="89.0" text-anchor="end">25% value, 75% outcome</text>
+<g class="bar know"><title>25% value, 75% outcome, : -63 ± 34 Elo</title>
+<rect x="380.2" y="76" width="105.8" height="16" rx="4"/>
+<rect x="480.0" y="76" width="6" height="16"/>
+<line class="err" x1="323.0" x2="437.3" y1="84.0" y2="84.0"/><line class="err" x1="323.0" x2="323.0" y1="79.0" y2="89.0"/><line class="err" x1="437.3" x2="437.3" y1="79.0" y2="89.0"/>
+<text class="val" x="315.0" y="89" text-anchor="end">-63</text></g>
+<text class="rowlabel" x="138" y="123.0" text-anchor="end">Half and half</text>
+<g class="bar neural"><title>Half and half, : -7 ± 34 Elo</title>
+<rect x="474.2" y="110" width="11.8" height="16" rx="4"/>
+<rect x="480.0" y="110" width="6" height="16"/>
+<line class="err" x1="417.1" x2="531.4" y1="118.0" y2="118.0"/><line class="err" x1="417.1" x2="417.1" y1="113.0" y2="123.0"/><line class="err" x1="531.4" x2="531.4" y1="113.0" y2="123.0"/>
+<text class="val" x="409.1" y="123" text-anchor="end">-7</text></g>
+</svg>
+      </div>
+    </section>
+
+    <section class="cmp-card">
+      <h2>How it was built</h2>
+      <ol class="steps">
+        <li><b>Play.</b> The classic engine played 30,000 games against itself; every position became a row of 170 numbers with what happened next.</li>
+        <li><b>Learn.</b> A network with two small hidden layers learned to predict the final score margin. It was trained twice: from scratch in plain Go (no libraries), and with PyTorch on a GPU.</li>
+        <li><b>Plug in.</b> The network replaces the hand-written judgement inside the same search, so the only difference between the two engines is the brain.</li>
+        <li><b>Prove it.</b> Thousands of games at equal positions and at equal time, every deal played from both seats.</li>
+      </ol>
+      <table class="cmp-table">
+        <caption>Go from scratch vs PyTorch, same data and network</caption>
+        <thead><tr><th></th><th>Go, CPU</th><th>PyTorch, RTX 5070</th></tr></thead>
+        <tbody>
+          <tr><td>Training time, 64 × 16</td><td>19 s</td><td>24 s</td></tr>
+          <tr><td>Training time, 128 × 32</td><td>42 s</td><td>22 s</td></tr>
+          <tr><td>Validation error (points²)</td><td>153.0</td><td>153.2</td></tr>
+          <tr><td>Elo at equal time, 64 × 16</td><td>+66 ± 24</td><td>+64 ± 24</td></tr>
+        </tbody>
+      </table>
+      <p class="note">The two agree to the decimal, which checks the hand-written training. A network this small is too little work per step for the GPU to pay off; it only pulls ahead on the bigger one.</p>
+    </section>
+
+    <section class="cmp-card cmp-choose">
+      <h2>Which should you use?</h2>
+      <div class="choose">
+        <div><h3><span class="sw neural"></span>Neural network</h3><p>The stronger player, and the default. Use it when you want the best move.</p></div>
+        <div><h3><span class="sw classic"></span>Classic</h3><p>Every term is a readable rule you can look up. Use it to see how a hand-built judgement thinks, or to compare the two on a position.</p></div>
+      </div>
+      <p><a class="btn primary" href="/">Try both on the board</a> <a class="btn" href="https://github.com/tusk80/azul-engine/blob/main/docs/ML.md" rel="noopener">Full write-up and code</a></p>
+    </section>
+
+    <details class="cmp-card">
+      <summary>All the numbers</summary>
+      <table class="cmp-table">
+        <thead><tr><th>Experiment</th><th>Games</th><th>Elo vs classic</th></tr></thead>
+        <tbody>
+          <tr><td>64 × 16, 40 ms per move</td><td>3,000</td><td>+64 ± 13</td></tr>
+          <tr><td>64 × 16, 200 ms per move</td><td>400</td><td>+110 ± 35</td></tr>
+          <tr><td>32 × 16, equal positions / equal time</td><td>800 / 800</td><td>+96 ± 25 / +62 ± 24</td></tr>
+          <tr><td>64 × 16, equal positions / equal time</td><td>800 / 800</td><td>+114 ± 25 / +66 ± 24</td></tr>
+          <tr><td>128 × 32, equal positions / equal time</td><td>3,000 / 800</td><td>+141 ± 13 / +6 ± 24</td></tr>
+          <tr><td>Board only, 128 × 32, equal positions</td><td>400</td><td>−7 ± 34</td></tr>
+          <tr><td>Target: search value only</td><td>400</td><td>−127 ± 36</td></tr>
+          <tr><td>Target: outcome only</td><td>400</td><td>−84 ± 35</td></tr>
+          <tr><td>Target: 25% value, 75% outcome</td><td>400</td><td>−63 ± 34</td></tr>
+          <tr><td>Target: half and half</td><td>400</td><td>−7 ± 34</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Equal positions: both sides search 20,000 positions per move. Ranges are 95% confidence. Every result is reproducible with the commands in the write-up.</p>
+    </details>
+  </main>
+
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>

@@ -88,6 +88,12 @@
       <div class="panel">
         <div class="panel-head">
           <h2>Engine</h2>
+          <label title="Which judgement the search uses">Brain
+            <select id="engine">
+              <option value="neural">Neural network</option>
+              <option value="classic">Classic</option>
+            </select>
+          </label>
           <label>Think
             <select id="think"></select>
           </label>
@@ -95,6 +101,7 @@
           <button id="btn-analyze" class="primary">Analyze</button>
         </div>
         <div id="analysis"></div>
+        <a class="compare-link" href="compare.html">Neural network or classic: which is stronger?</a>
       </div>
 
       <div id="pv-panel" class="panel" hidden>
@@ -151,6 +158,8 @@
         <dd>Click tiles in a factory or the center, then click a highlighted pattern line or the floor.</dd>
         <dt>Copy a real game</dt>
         <dd><em>Edit board</em>, pick a color, then click factory slots, line cells, wall cells and floor slots. The board tells you if a position is impossible.</dd>
+        <dt>Choose a brain</dt>
+        <dd><em>Neural network</em> judges positions with a network trained on 1.5 million self-play positions; <em>Classic</em> uses hand-written rules. The network wins more often; <a href="compare.html">see the numbers</a>.</dd>
         <dt>Read the engine</dt>
         <dd>The number is the expected lead in points for the player to move. Chips show what the move does right now: wall points, bonuses, floor penalty.</dd>
         <dt>Explore a line</dt>

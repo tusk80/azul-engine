@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
@@ -81,6 +82,26 @@ func TestCasual(t *testing.T) {
 	body, _ = json.Marshal(BestMoveRequest{State: data, Style: "nope"})
 	if status, _ := Dispatch(search.New(1), Limits{}, "/bestmove", body); status != 400 {
 		t.Fatalf("unknown style: status %d, want 400", status)
+	}
+}
+
+func TestEngineChoice(t *testing.T) {
+	eng := search.New(1)
+	lim := Limits{MoveTime: 100 * time.Millisecond, MaxMoveTime: time.Second}
+	for _, name := range []string{"neural", "classic", "neural", ""} {
+		body, _ := json.Marshal(BestMoveRequest{State: midround(t), Engine: name})
+		status, out := Dispatch(eng, lim, "/bestmove", body)
+		var resp BestMoveResponse
+		if err := json.Unmarshal(out, &resp); err != nil || status != 200 {
+			t.Fatalf("%q: status %d: %s", name, status, out)
+		}
+		if want := cmp.Or(name, "classic"); resp.Engine != want {
+			t.Fatalf("asked for %q, answered by %q", name, resp.Engine)
+		}
+	}
+	body, _ := json.Marshal(BestMoveRequest{State: midround(t), Engine: "magic"})
+	if status, _ := Dispatch(eng, lim, "/bestmove", body); status != 400 {
+		t.Fatalf("unknown engine: status %d, want 400", status)
 	}
 }
 

@@ -184,7 +184,7 @@ async function analyze() {
   ui.analysisErr = '';
   render();
   try {
-    const r = await api('/bestmove', { state: pos.state, timeMs: +$('think').value, multiPV: 3 });
+    const r = await api('/bestmove', { state: pos.state, timeMs: +$('think').value, multiPV: 3, engine: $('engine').value });
     if (id !== ui.reqId) return;
     ui.analysis = r;
   } catch (e) {
@@ -444,6 +444,7 @@ function setStatusNote(text) {
 async function setup() {
   applyTheme(store.get('azul.theme'));
   applySymbols(store.get('azul.symbols') === '1');
+  if (store.get('azul.engine') === 'classic') $('engine').value = 'classic';
   $('intro').hidden = store.get('azul.intro') === 'done';
 
   EXAMPLES.forEach((e, i) => $('examples').append(h('option', { value: i }, e.name)));
@@ -1028,7 +1029,7 @@ function renderAnalysis() {
   });
   box.append(lines);
   box.append(h('div', { class: 'meta' },
-    `P${pos.state.toMove + 1}'s view · depth ${a.depth}${a.exact ? ', solved to round end' : ''} · ${(a.nodes / 1e6).toFixed(1)}M nodes in ${(a.timeMs / 1000).toFixed(1)} s`));
+    `${a.engine === 'neural' ? 'Neural network' : 'Classic'} · P${pos.state.toMove + 1}'s view · depth ${a.depth}${a.exact ? ', solved to round end' : ''} · ${(a.nodes / 1e6).toFixed(1)}M nodes in ${(a.timeMs / 1000).toFixed(1)} s`));
 }
 
 function renderPV() {
@@ -1114,6 +1115,10 @@ $('btn-json').addEventListener('click', openJSON);
 $('btn-analyze').addEventListener('click', analyze);
 $('think').addEventListener('change', () => {
   store.set('azul.think', $('think').value);
+  if ($('auto').checked) analyze();
+});
+$('engine').addEventListener('change', () => {
+  store.set('azul.engine', $('engine').value);
   if ($('auto').checked) analyze();
 });
 $('btn-share').addEventListener('click', share);

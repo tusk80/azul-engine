@@ -3,176 +3,209 @@
 [![CI](https://github.com/tusk80/azul-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/tusk80/azul-engine/actions/workflows/ci.yml)
 [![Site](https://github.com/tusk80/azul-engine/actions/workflows/site.yml/badge.svg)](https://github.com/tusk80/azul-engine/actions/workflows/site.yml)
 
-An engine and analysis board for 2-player Azul (standard wall), written in Go.
-It runs two ways from the same code: as one native binary (engine, HTTP API and
-web page together), or entirely in the browser as WebAssembly, with no server.
+**A game AI for 2-player Azul, and a neural network that learned to beat it.**
 
-- **Engine**: alpha-beta search that solves the rest of a round exactly when it
-  can, with an evaluation tuned by self-play.
-- **Analysis board**: play moves, set up any position, see the top 3 moves with
-  a point breakdown, and step through each line of play.
-- **Browser overlay**: a userscript that shows the suggested move on
-  buddyboardgames.com.
+It started as a classic game engine: exact rules, alpha-beta search, and a
+hand-written evaluation tuned by self-play. Then the engine generated 1.5 million
+positions by playing itself, a small neural network learned from them, and in
+3,000 games at equal thinking time **the network beat the hand-tuned evaluation
+it learned from**.
 
-**Try it: https://azul.yesil.cc** (runs in your browser, nothing to install)
+**[Try it in your browser](https://azul.yesil.cc)** · **[Neural vs classic: the results](https://azul.yesil.cc/compare.html)** · [Technical write-up](docs/ML.md)
 
-![The analysis board showing a solved mid-round position](docs/screenshot.png)
+| Neural network vs hand-tuned evaluation | Result |
+|---|---|
+| Equal thinking time, 40 ms per move | **+64 ± 13 Elo** (59% of points, 3,000 games) |
+| Equal thinking time, 200 ms per move | **+110 ± 35 Elo** (400 games) |
+| Equal positions searched | **+141 ± 13 Elo** (3,000 games, 128 × 32 network) |
 
-Unofficial fan project. Azul is a trademark of its publishers; this project is
-not affiliated with or endorsed by them.
+![The analysis board with the neural network's top three moves](docs/screenshot.png)
+
+## What's inside
+
+- **Rules engine.** Every Azul rule, a 110-byte copyable game state, incremental
+  hashing, and a move generator checked by perft counts.
+- **Search.** Negamax with principal-variation search, iterative deepening, a
+  transposition table and move ordering. Later in a round it solves the rest of
+  the round exactly.
+- **Two evaluations, one search.**
+  - *Classic*: fifteen hand-written terms, tuned by SPSA self-play.
+  - *Neural*: a 170 → 64 → 16 → 1 network that predicts the final score margin.
+- **Machine-learning pipeline.** Self-play data generation, training written
+  from scratch in Go (no libraries) and again in PyTorch on a GPU as a benchmark,
+  and match-based evaluation with confidence intervals.
+- **Analysis board.** Set up or play any position, see the top three moves with a
+  point breakdown, step through each line, choose the brain, share a link.
+- **Runs anywhere.** One native binary (engine, HTTP API and web page), or
+  compiled to WebAssembly and run entirely in the visitor's browser: the live
+  site has no backend.
+- **Browser overlay.** A userscript that shows the suggested move inside games
+  on buddyboardgames.com.
+
+## How the network was built
+
+```
+ self-play games ──► 1.5M positions ──► train (Go or PyTorch) ──► network JSON
+  azul gendata        170 features        azul train / train.py        │
+                      + 3 labels                                        ▼
+                                          matches vs classic ◄── plugged into the search
+                                          azul selfplay -a-net
+```
+
+1. **Data.** The engine plays 30,000 games against itself. Each position becomes
+   170 integers seen from the side to move (walls, pattern lines, floors, scores,
+   tiles on the table, and the board as it would look if the round were scored
+   now), labelled with the search's value, the final margin and the result.
+2. **Training.** A two-hidden-layer perceptron learns to predict the final
+   margin, with a target mixing the search's value and the real outcome half and
+   half. Adam, minibatches, a held-out validation set.
+3. **Inference.** The network replaces the hand-written evaluation inside the same
+   search. Its first layer visits only nonzero inputs, since most features are
+   empty wall cells.
+4. **Evaluation.** Matches with every deal played twice, seats swapped, at equal
+   positions searched (what it knows) and at equal time (how it plays).
+
+What made the difference, measured:
+
+| Experiment | Elo vs classic |
+|---|---|
+| Raw board only, 128 × 32 | −7 ± 34 (a tie) |
+| + the board as if scored now, 128 × 32 | **+141 ± 13** at equal positions |
+| 128 × 32 at equal time | +6 ± 24: knows more, too slow |
+| **64 × 16 at equal time** | **+64 ± 13**: the one that ships |
+| Target: search value only / outcome only | −127 / −84 (raw board) |
+
+Go and PyTorch, trained on the same data, reach the same validation error
+(153.0 vs 153.2) and the same strength (+66 vs +64), which also checks the
+hand-written backpropagation. Details: [docs/ML.md](docs/ML.md).
 
 ## Quick start
 
-1. Download the file for your system from the [latest release](https://github.com/tusk80/azul-engine/releases/latest).
-2. Run it with no arguments (on Windows, double-click it). It starts the engine
-   and opens the analysis board at http://127.0.0.1:8765.
-3. Keep its window open; close it to stop.
-
-Or build it yourself (needs Go 1.26+):
+Download the file for your system from the [latest release](https://github.com/tusk80/azul-engine/releases/latest)
+and run it (on Windows, double-click it). It starts the engine and opens the
+board at http://127.0.0.1:8765. Or build it (Go 1.26+):
 
 ```bash
 go build -o azul ./cmd/azul
 ./azul
 ```
 
-## Analysis board
-
-- **Play**: click tiles in a factory or the center, then a highlighted line or the floor.
-  At the end of a round, *Score round* and *Deal next round* (or edit in the real deal).
-- **Engine**: the top 3 moves with evals and a breakdown (wall points, bonus, floor
-  penalty, first-player token). *Auto* re-analyses after every move.
-- **Lines**: click an engine move to step through its line with ◀ ▶ (or the arrow keys);
-  the next move is highlighted on the board. *Play to here* makes the moves.
-- **Edit board**: pick a color or the eraser, then click factory slots, line cells,
-  wall cells or floor slots. The engine checks the position as you go.
-- **Share**: copies a link that opens the exact position.
-- **Photo**: shows a picture of a real board above the editor while you click its
-  tiles in. The picture stays on your device unless you press **Read with AI**,
-  which fills the board in using your own Google Gemini or Anthropic API key
-  (kept in your browser, sent only to that provider). Check the result: models
-  misread tiles.
-- **Import / export**: paste a position as JSON or copy the current one.
-- **Examples**, a light/dark switch, and optional symbols on tiles for color-blind use.
-- **Undo** (Ctrl+Z) and the history list step back.
-
-## Hosting it
-
-**As a static site (no server).** The engine compiles to WebAssembly and runs in
-each visitor's browser, so any static host works:
+### Train your own network
 
 ```bash
-bash hosting/build-site.sh    # writes site/
+./azul gendata -games 30000 -seed 1000000 -out ml/data.csv   # about 7 minutes on 24 cores
+./azul train -data ml/data.csv -h1 64 -h2 16 -out net.json   # about 20 seconds
+./azul selfplay -a-net net.json -b default -pairs 1500 -time 40ms
 ```
 
-The `Site` workflow does this on every push and publishes the result to the
-`pages` branch: the site in `public/` and a `wrangler.jsonc` beside it. On
-Cloudflare, connect the repo, set the production branch to `pages`, leave the
-build command empty, deploy with `npx wrangler deploy`, and turn preview
-builds off (only the `pages` branch is deployable). Any other static host can
-serve `public/` as-is. In the browser the engine searches about a
-third as fast as the native binary.
+With PyTorch instead (uses a CUDA GPU if there is one):
 
-**As a server.** `azul serve -public` adds the limits a public server needs: a
-2-second cap per search, several engines, per-visitor rate limits and
-same-origin-only API access. Put it behind a reverse proxy that adds HTTPS, and
-pass `-ip-header` so rate limits are per visitor.
+```bash
+python -m venv ml/.venv
+ml/.venv/Scripts/pip install torch --index-url https://download.pytorch.org/whl/cu128
+ml/.venv/Scripts/pip install numpy pandas
+ml/.venv/Scripts/python ml/train.py --data ml/data.csv --h1 64 --h2 16 --out net.json
+```
+
+## The analysis board
+
+- **Play** by clicking tiles, then a pattern line or the floor. *Score round* and
+  *Deal next round* at the end of a round, or edit in the real deal.
+- **Engine**: the top three moves with their points, floor penalties and bonuses.
+  **Brain** picks the neural network (default) or the classic evaluation.
+- **Lines**: click a move to step through the line behind it with ◀ ▶.
+- **Edit board** to copy a real game; **Photo** shows a picture of one beside the
+  editor, and **Read with AI** fills the board in from it with your own Gemini or
+  Anthropic key (kept in your browser).
+- **Share** copies a link to the exact position; **Import / export** as JSON.
 
 ## Browser overlay (buddyboardgames.com)
 
 1. Run the engine (`azul`, or double-click `azul.exe`).
-2. Install [Tampermonkey](https://www.tampermonkey.net/) in Chrome.
-3. Open [azul-overlay.user.js](https://raw.githubusercontent.com/tusk80/azul-engine/main/userscript/azul-overlay.user.js)
-   and press **Install** when Tampermonkey asks.
-4. In a 2-player game, a panel shows the suggested move on your turn; the source
-   tiles pulse and the target line is outlined. **Alt+A** hides or shows it.
-5. **Analyze this position** (or **Alt+S**) opens the current position in the
-   analysis board, on either player's turn. This part works without the local
-   engine: the position travels in the link itself.
-6. **Alt+C** switches to casual play: the suggestion is what is best for your
-   own board, and it stops taking tiles just to hurt the opponent.
+2. Install [Tampermonkey](https://www.tampermonkey.net/), then open
+   [azul-overlay.user.js](https://raw.githubusercontent.com/tusk80/azul-engine/main/userscript/azul-overlay.user.js)
+   and press **Install**.
+3. In a 2-player game a panel shows the suggested move on your turn.
+   **Alt+A** hides it, **Alt+S** opens the position on the board,
+   **Alt+N** switches between the neural and classic brain, and **Alt+C**
+   switches to casual play (best for your own board, no blocking the opponent).
 
-The script reads the page's own game object and only talks to `127.0.0.1`.
-
-Please use it for study, solo practice, or games where everyone at the table
-knows about it. Using an engine against people who don't know is cheating.
+Please use it for study, solo practice, or games where everyone knows about it.
+Using an engine against people who don't know is cheating.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `azul` | Run the engine and open the analysis board. |
-| `azul serve` | The same without opening a browser (`-public` for a public site). |
-| `azul analyze state.json` | Search a position in the terminal (`-time 2s`, `-multipv 3`). |
-| `azul show state.json` | Print the board and every legal move. |
-| `azul selfplay -a W -b W` | Engine-vs-engine match; each deal is played twice with seats swapped. |
-| `azul tune -from W` | Tune evaluation weights with SPSA self-play. |
-| `azul gendata -games N` | Self-play positions as a CSV of features and outcomes, the training data for a learned evaluation. |
-| `azul perft state.json 5` | Count move sequences (move generator check and speed test). |
-| `azul random -seed 7` | Play a random game and print each round. |
-
-`W` is `default`, `zero` (points only) or a weights file such as `weights/tuned4.json`.
+| `azul` | Run the engine and open the board. |
+| `azul serve` | The same without opening a browser (`-public` adds limits for a public site). |
+| `azul analyze state.json` | Search a position in the terminal. |
+| `azul gendata` | Self-play positions as training data (CSV). |
+| `azul train` | Train a network on that data. |
+| `azul selfplay` | Engine-vs-engine match (`-a-net`, `-b-net` for networks). |
+| `azul tune` | Tune the classic evaluation with SPSA. |
+| `azul show`, `perft`, `random` | Print a board and its moves, count move sequences, play a random game. |
 
 ## HTTP API
 
 | Endpoint | Body | Returns |
 |---|---|---|
-| `POST /bestmove` | `{"state": {...}, "timeMs": 1000, "multiPV": 3}` | Best move with its effect (points, floor penalty, bonus), `eval` in points for the side to move, `outcome` once the game is decided, the line of play (`pv`), alternatives, and a one-line `reason`. Add `"style": "casual"` for a relaxed move: best for the mover's own board, one move ahead, ignoring the opponent. |
-| `POST /apply` | `{"state": {...}, "moves": ["F2 red->3", "score", "deal"]}` | Checks a position (no moves) or plays a line, returning every position on the way. |
+| `POST /bestmove` | `{"state": {...}, "timeMs": 1000, "multiPV": 3, "engine": "neural"}` | Best move with its effect, `eval` in points for the side to move, the line of play, alternatives and a one-line `reason`. `engine` is `classic` (default) or `neural`; `"style": "casual"` gives a relaxed move instead. |
+| `POST /apply` | `{"state": {...}, "moves": ["F2 red->3", "score", "deal"]}` | Checks a position or plays a line, returning every position on the way. |
 | `POST /new` | `{"seed": 0}` | A freshly dealt game. |
-| `GET /health` | | `{"status":"ok"}` |
 
-Errors are `{"error": "..."}` with status 400 (bad position or move), 422 (no
-legal moves), 429 (rate limit) or 503 (all engines busy).
+Errors are `{"error": "..."}` with status 400, 422 (no legal moves), 429 (rate
+limit) or 503 (all engines busy). Positions look like
+[testdata/midround.json](testdata/midround.json).
 
-### Positions
+## Quality
 
-See `testdata/opening.json` and `testdata/midround.json`. Walls are 5 strings,
-one per row: `.` empty, `x` or the color letter (`B Y R K W`) filled. `floor` is
-the number of occupied floor slots including the first-player token. `bag` and
-`lid` are optional; when missing they are inferred from the 20-per-color total.
+- **Tests at every layer:** perft counts for move generation, the search checked
+  against a plain alpha-beta reference and brute force (and mutation-tested), a
+  numerical gradient check for the network's backpropagation, and API and HTTP
+  tests. CI runs them on every push, plus the WebAssembly build.
+- **No runtime dependencies:** the engine, server and network are standard-library
+  Go. PyTorch is only for the benchmark.
+- **Measured, not guessed:** every change to playing strength was adopted only
+  after thousands of paired games. See [How the engine works](docs/HOW-IT-WORKS.md).
 
-## How strong is it?
+## Hosting
 
-For the ideas behind it, see [How the engine works](docs/HOW-IT-WORKS.md).
-For the neural-network evaluation and its results, see [A learned evaluation](docs/ML.md).
-
-Measured in self-play, each deal played twice with seats swapped:
-
-| Evaluation | Result |
-|---|---|
-| Tuned (default) vs points-only | about 92% of games |
-| Each round of new evaluation terms | +158 Elo, then about +30 |
-
-At the start of a round it searches about 6 moves deep in a second; later
-in the round it solves the round to the end. It does not model the random deal
-of the next round beyond its evaluation: an experimental sampling lookahead
-(`-look N -lookdepth D`) lost 10–50 Elo at equal work and is off by default.
+The `Site` workflow builds the static site (`hosting/build-site.sh`: the page
+plus the engine as WebAssembly, about 3.8 MB) on every push and publishes it to
+Cloudflare. `azul serve -public` runs it as a server instead, with a time cap per
+search, an engine pool and per-visitor rate limits.
 
 ## Rules decisions
 
-- Scores never go below 0 (placement points are added before floor penalties;
-  the clamp applies to the round total).
+- Scores never go below 0.
 - If nobody takes the first-player token, the same player starts the next round.
-- The engine plays to win first, then to maximise the margin; ties on points
-  go to more complete rows.
+- The engine plays to win first, then to maximise the margin.
 
 ## Layout
 
 ```
-cmd/azul/    CLI
-cmd/wasm/    the engine for the browser (WebAssembly)
+cmd/azul/      CLI
+cmd/wasm/      the engine for the browser
 internal/
-  game/      rules, move generation, scoring, hashing, JSON, ASCII board
-  search/    alpha-beta (PVS), iterative deepening, transposition table
-  eval/      evaluation terms and weights
-  selfplay/  parallel matches and SPSA tuning
-  api/       requests and responses, shared by the server and the browser build
-  server/    HTTP API, limits, and the analysis board (server/ui, embedded)
-hosting/     build script, headers and Cloudflare config for the static site
-userscript/  Tampermonkey overlay for buddyboardgames.com
-weights/     tuned evaluation weights
-testdata/    example positions
+  game/        rules, move generation, scoring, hashing
+  search/      alpha-beta search, transposition table
+  eval/        the classic evaluation
+  dataset/     features and self-play training data
+  nn/          the network: inference, training, the shipped weights
+  selfplay/    matches and SPSA tuning
+  api/         requests and responses, shared by server and browser
+  server/      HTTP API and the web pages (server/ui)
+ml/            PyTorch trainer and the results page generator
+docs/          how the engine works, the ML write-up
+hosting/       static site build and Cloudflare config
+userscript/    the buddyboardgames.com overlay
+weights/       classic evaluation weights
+testdata/      example positions
 ```
+
+Unofficial fan project. Azul is a trademark of its publishers; this project is
+not affiliated with or endorsed by them.
 
 ## License
 

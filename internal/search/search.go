@@ -71,6 +71,8 @@ type Searcher struct {
 	// Eval replaces Weights.Evaluate when set, e.g. with a trained network.
 	// Call Clear after changing it.
 	Eval func(s *game.State, p int) int
+	// EvalName labels Eval for callers that switch between evaluations.
+	EvalName string
 	// Lookahead values round-end positions by sampling next-round deals.
 	// It runs as a second pass once the round is solved without it, and only
 	// replaces the plain result if it completes within the budget. Zero

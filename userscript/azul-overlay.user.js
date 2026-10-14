@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Azul engine overlay
 // @namespace    azul-engine
-// @version      0.4.0
-// @description  Shows the local Azul engine's suggested move on buddyboardgames.com and opens any position in the analysis board. Alt+A toggles, Alt+S analyses, Alt+C switches to casual play.
+// @version      0.5.0
+// @description  Shows the local Azul engine's suggested move on buddyboardgames.com and opens any position in the analysis board. Alt+A toggles, Alt+S analyses, Alt+C switches to casual play, Alt+N between the neural and classic engine.
 // @match        https://buddyboardgames.com/azul*
 // @homepageURL  https://github.com/tusk80/azul-engine
 // @downloadURL  https://raw.githubusercontent.com/tusk80/azul-engine/main/userscript/azul-overlay.user.js
@@ -31,6 +31,8 @@
   let enabled = true;
   // Casual: suggest what is best for your own board and leave the opponent alone.
   let casual = localStorage.getItem('azul-engine-casual') === '1';
+  // The trained network is stronger; classic is the hand-written evaluation.
+  let neural = localStorage.getItem('azul-engine-brain') !== 'classic';
   let lastKey = null; // JSON of the last state sent to the engine
   let result = null; // last engine response for lastKey
   let status = 'waiting for your turn';
@@ -97,7 +99,7 @@
       method: 'POST',
       url: ENGINE_URL,
       headers: { 'Content-Type': 'application/json' },
-      data: JSON.stringify({ state, timeMs: THINK_MS, style: casual ? 'casual' : '' }),
+      data: JSON.stringify({ state, timeMs: THINK_MS, style: casual ? 'casual' : '', engine: neural ? 'neural' : 'classic' }),
       timeout: THINK_MS + 5000,
       onload: (res) => {
         if (key !== lastKey) return; // the position moved on meanwhile
@@ -225,7 +227,7 @@
 
   function render() {
     panel.style.display = enabled ? '' : 'none';
-    hint.textContent = `Alt+A to hide · Alt+C ${casual ? 'full strength' : 'casual'}`;
+    hint.textContent = `Alt+A hide · Alt+C ${casual ? 'full strength' : 'casual'} · Alt+N ${neural ? 'classic' : 'neural'}`;
     body.replaceChildren();
     if (!enabled) return;
     if (result) {
@@ -233,7 +235,7 @@
       body.append(
         el('div', 'move', describe(result.move)),
         // In casual mode the number is the value of your own board, not a lead.
-        el('div', 'eval', casual ? 'casual: best for your own board' : `eval ${evalText}  ·  depth ${result.depth}${result.exact ? ' (exact)' : ''}`),
+        el('div', 'eval', casual ? 'casual: best for your own board' : `${neural ? 'neural' : 'classic'} · eval ${evalText} · depth ${result.depth}${result.exact ? ' (exact)' : ''}`),
         el('div', '', result.reason),
       );
       if (!casual && result.lines && result.lines.length > 1) {
@@ -276,6 +278,12 @@
       casual = !casual;
       localStorage.setItem('azul-engine-casual', casual ? '1' : '0');
       lastKey = null; // re-ask in the new style
+      render();
+      e.preventDefault();
+    } else if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'n') {
+      neural = !neural;
+      localStorage.setItem('azul-engine-brain', neural ? 'neural' : 'classic');
+      lastKey = null;
       render();
       e.preventDefault();
     } else if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 's' && enabled && analysisLink) {

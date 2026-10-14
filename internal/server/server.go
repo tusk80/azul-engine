@@ -210,7 +210,7 @@ func (s *Server) handleBestMove(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, errors.New("the engine is busy: try again in a moment"))
 		return
 	}
-	resp, err := api.BestMove(eng, &st, opt)
+	resp, err := req.Answer(eng, &st, opt)
 	s.engines <- eng
 	if r.Context().Err() != nil {
 		return // the client left; nobody to answer
