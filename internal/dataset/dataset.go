@@ -87,7 +87,8 @@ type Row struct {
 	Result   int // 1 win, 0 shared, -1 loss, for the side to move
 }
 
-// Game plays one self-play game and returns a row per position searched.
+// Game plays one self-play game and returns a row per position searched,
+// plus one at the start of each new round, before the deal.
 // With probability explore a random move is played instead of the engine's,
 // so games from different seeds do not all follow the same habits.
 func Game(eng *search.Searcher, seed, nodes uint64, explore float64) []Row {
@@ -100,6 +101,10 @@ func Game(eng *search.Searcher, seed, nodes uint64, explore float64) []Row {
 	for !s.GameOver {
 		if s.RoundOver() {
 			if !s.ResolveRound() {
+				// The search values round ends by scoring them, so a learned eval
+				// meets positions with an empty table too: record one per round.
+				rows = append(rows, Row{Features: Features(&s), Eval: eval.Evaluate(&s, int(s.ToMove))})
+				movers = append(movers, int(s.ToMove))
 				s.Refill(rng)
 			}
 			continue

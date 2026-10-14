@@ -10,12 +10,14 @@ import (
 
 	"github.com/tusk80/azul-engine/internal/eval"
 	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/nn"
 	"github.com/tusk80/azul-engine/internal/search"
 )
 
 // Player is an engine configuration: weights plus search limits.
 type Player struct {
 	Weights   eval.Weights
+	Net       *nn.Net // replaces Weights when set
 	Lookahead search.Lookahead
 	Nodes     uint64        // per-move node budget (deterministic)
 	Depth     int           // per-move depth limit
@@ -36,6 +38,10 @@ func Game(eng [2]*search.Searcher, pl [2]*Player, seed uint64) game.State {
 	rng := rand.New(rand.NewPCG(seed, 0x5eed))
 	for i := range eng {
 		eng[i].Weights = pl[i].Weights
+		eng[i].Eval = nil
+		if pl[i].Net != nil {
+			eng[i].Eval = pl[i].Net.Evaluator().Evaluate
+		}
 		eng[i].Lookahead = pl[i].Lookahead
 		eng[i].Clear()
 	}

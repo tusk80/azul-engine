@@ -68,6 +68,9 @@ type rootMove struct {
 // concurrent use; run one Searcher per goroutine.
 type Searcher struct {
 	Weights eval.Weights
+	// Eval replaces Weights.Evaluate when set, e.g. with a trained network.
+	// Call Clear after changing it.
+	Eval func(s *game.State, p int) int
 	// Lookahead values round-end positions by sampling next-round deals.
 	// It runs as a second pass once the round is solved without it, and only
 	// replaces the plain result if it completes within the budget. Zero
@@ -102,6 +105,13 @@ type Searcher struct {
 // transposition table.
 func New(ttMB int) *Searcher {
 	return &Searcher{Weights: eval.Default, tt: NewTT(ttMB)}
+}
+
+func (e *Searcher) evaluate(s *game.State) int {
+	if e.Eval != nil {
+		return e.Eval(s, int(s.ToMove))
+	}
+	return e.Weights.Evaluate(s, int(s.ToMove))
 }
 
 // Clear forgets everything learned from earlier searches. Call it between
@@ -309,11 +319,11 @@ func (e *Searcher) negamax(ply, depth, alpha, beta int) int {
 		if e.lookOn {
 			return e.roundEnd(s)
 		}
-		return e.Weights.Evaluate(s, int(s.ToMove))
+		return e.evaluate(s)
 	}
 	if depth <= 0 {
 		e.leafCuts++
-		return e.Weights.Evaluate(s, int(s.ToMove))
+		return e.evaluate(s)
 	}
 
 	alpha0 := alpha

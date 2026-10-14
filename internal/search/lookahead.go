@@ -63,7 +63,7 @@ func (e *Searcher) roundEnd(s *game.State) int {
 	l := e.look
 	slot := &l.cache[next.Hash&(1<<lookCacheBits-1)]
 	if !slot.ok || slot.key != next.Hash {
-		l.inner.Weights = e.Weights
+		l.inner.Weights, l.inner.Eval = e.Weights, e.Eval
 		before := l.inner.nodes
 		sum := 0
 		for k := range e.Lookahead.Samples {

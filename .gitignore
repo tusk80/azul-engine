@@ -3,3 +3,7 @@
 /dist/
 /site/
 /*.csv
+/ml/*.csv
+/ml/*.json
+/ml/__pycache__/
+/ml/.venv/

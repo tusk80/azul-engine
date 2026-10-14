@@ -25,6 +25,7 @@ import (
 	"github.com/tusk80/azul-engine/internal/dataset"
 	"github.com/tusk80/azul-engine/internal/eval"
 	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/nn"
 	"github.com/tusk80/azul-engine/internal/search"
 	"github.com/tusk80/azul-engine/internal/selfplay"
 	"github.com/tusk80/azul-engine/internal/server"
@@ -45,6 +46,9 @@ const usage = `usage:
   (W = "default", "zero", or a weights JSON file)
   azul gendata [-games 1000] [-nodes 20000] [-out data.csv]
                                      self-play positions as training data
+  azul train -data data.csv [-epochs 10] [-out net.json]
+                                     train a network on that data
+  azul selfplay -a-net net.json ...  play a trained network
   azul show <state.json|->           print the board and legal moves
   azul perft <state.json|-> <depth>  count move sequences (stops at round end)
   azul random [-seed N] [-json]      play a random game, printing each round`
@@ -72,6 +76,8 @@ func main() {
 		err = cmdAnalyze(os.Args[2:])
 	case "selfplay":
 		err = cmdSelfplay(os.Args[2:])
+	case "train":
+		err = cmdTrain(os.Args[2:])
 	case "gendata":
 		err = cmdGendata(os.Args[2:])
 	case "tune":
@@ -360,12 +366,63 @@ func loadWeights(name string) (eval.Weights, error) {
 	return w, nil
 }
 
+func loadNet(path string) (*nn.Net, error) {
+	if path == "" {
+		return nil, nil
+	}
+	return nn.Load(path)
+}
+
+// cmdTrain fits a network to gendata output and saves it.
+func cmdTrain(args []string) error {
+	fs := flag.NewFlagSet("train", flag.ContinueOnError)
+	data := fs.String("data", "data.csv", "training data from azul gendata")
+	out := fs.String("out", "net.json", "where to save the network")
+	h1 := fs.Int("h1", 128, "units in the first hidden layer")
+	h2 := fs.Int("h2", 32, "units in the second hidden layer")
+	epochs := fs.Int("epochs", 10, "passes over the data")
+	batch := fs.Int("batch", 1024, "positions per step")
+	lr := fs.Float64("lr", 1e-3, "Adam step size")
+	lambda := fs.Float64("lambda", 0.5, "target mix: 1 = search eval only, 0 = final margin only")
+	valFrac := fs.Float64("val", 0.05, "share of rows (the last ones) held out for validation")
+	seed := fs.Uint64("seed", 1, "initialisation and shuffling seed")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	start := time.Now()
+	d, err := nn.LoadCSV(*data)
+	if err != nil {
+		return err
+	}
+	train, val := d.Split(1 - *valFrac)
+	fmt.Printf("%d training and %d validation positions, loaded in %s\n", train.Len(), val.Len(), time.Since(start).Round(time.Millisecond))
+	net := nn.New(*h1, *h2, *seed)
+	net.FitScale(train)
+	r := net.Report(val)
+	fmt.Printf("hand-written eval vs final margin: MSE %.2f, picks the winner %.1f%%\n", r.EvalMSE, 100*r.EvalSign)
+	fmt.Println("epoch  train loss  val MSE  winner%  time")
+	start = time.Now()
+	nn.Train(net, train, val, nn.Config{
+		Epochs: *epochs, Batch: *batch, LR: *lr, Lambda: *lambda, Workers: runtime.NumCPU(), Seed: *seed,
+		Log: func(epoch int, loss float64, r nn.Report) {
+			fmt.Printf("%5d  %10.2f  %7.2f  %6.1f%%  %s\n", epoch, loss, r.NetMSE, 100*r.NetSign, time.Since(start).Round(time.Second))
+		},
+	})
+	if err := net.Save(*out); err != nil {
+		return err
+	}
+	fmt.Println("saved", *out)
+	return nil
+}
+
 func cmdSelfplay(args []string) error {
 	fs := flag.NewFlagSet("selfplay", flag.ContinueOnError)
 	aName := fs.String("a", "default", "weights for player A")
 	bName := fs.String("b", "zero", "weights for player B")
 	aLook := lookFlags(fs, "a-")
 	bLook := lookFlags(fs, "b-")
+	aNet := fs.String("a-net", "", "trained network for player A, replacing its weights")
+	bNet := fs.String("b-net", "", "trained network for player B, replacing its weights")
 	pairs := fs.Int("pairs", 200, "game pairs (each deal played with seats swapped)")
 	nodes := fs.Uint64("nodes", 20000, "node budget per move")
 	depth := fs.Int("depth", 0, "depth limit per move (0 = none)")
@@ -385,6 +442,12 @@ func cmdSelfplay(args []string) error {
 	}
 	a := selfplay.Player{Weights: wa, Lookahead: aLook(), Nodes: *nodes, Depth: *depth, Time: *moveTime}
 	b := selfplay.Player{Weights: wb, Lookahead: bLook(), Nodes: *nodes, Depth: *depth, Time: *moveTime}
+	if a.Net, err = loadNet(*aNet); err != nil {
+		return err
+	}
+	if b.Net, err = loadNet(*bNet); err != nil {
+		return err
+	}
 	start := time.Now()
 	st := selfplay.Match(a, b, selfplay.MatchConfig{
 		Pairs: *pairs, Workers: *workers, Seed: *seed,
