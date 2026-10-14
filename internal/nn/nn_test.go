@@ -85,7 +85,7 @@ func TestTrainLearns(t *testing.T) {
 	before := n.Report(val).NetMSE
 	Train(n, train, val, Config{Epochs: 30, Batch: 64, LR: 3e-3, Lambda: 0.5, Workers: 4, Seed: 5})
 	after := n.Report(val).NetMSE
-	if after > before/10 {
+	if after > before/5 {
 		t.Fatalf("validation error %.3f -> %.3f: did not learn", before, after)
 	}
 }

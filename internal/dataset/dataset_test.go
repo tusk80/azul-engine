@@ -26,7 +26,7 @@ func TestFeatures(t *testing.T) {
 	want := map[string]int16{
 		"me_line3_" + game.Color(3).String(): 2, "me_floor": 2, "me_score": 9, "opp_wall_1_2": 1,
 		"factories_" + game.Color(1).String(): 3, "center_" + game.Color(4).String(): 3,
-		"factories_left": 2, "token_mine": 1,
+		"factories_left": 2, "token_mine": 1, "me_scored_score": 7, "opp_scored_wall_1_2": 1,
 	}
 	for i, n := range Names() {
 		if f[i] != want[n] {

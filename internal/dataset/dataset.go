@@ -12,19 +12,26 @@ import (
 )
 
 const (
-	perPlayer = 25 + 25 + 2 // wall cells, line counts by row and color, floor, score
+	// Per player: wall cells, line counts by row and color, floor, score, and
+	// the wall and score if the round were scored now.
+	perPlayer = 25 + 25 + 2 + 25 + 1
 	// NumFeatures is the length of a feature row.
 	NumFeatures = 2*perPlayer + 5 + 5 + 4
 )
 
 // Features describes s from the side to move's point of view, as small
 // whole numbers: the mover's board, the opponent's board, then the table.
+// Each board also appears as it would after scoring the round now, the way
+// the hand-written eval sees it, so the network need not learn the scoring
+// rules from examples.
 // Scaling is left to the model, so the same row feeds training and play.
 func Features(s *game.State) (f [NumFeatures]int16) {
 	me := int(s.ToMove)
+	proj := *s
+	proj.ProjectRound()
 	i := 0
 	for _, p := range [2]int{me, 1 - me} {
-		pb := &s.Players[p]
+		pb, pp := &s.Players[p], &proj.Players[p]
 		for cell := range 25 {
 			f[i+cell] = int16(pb.Wall.Rows >> cell & 1)
 		}
@@ -37,6 +44,11 @@ func Features(s *game.State) (f [NumFeatures]int16) {
 		i += 25
 		f[i], f[i+1] = int16(pb.Floor), pb.Score
 		i += 2
+		for cell := range 25 {
+			f[i+cell] = int16(pp.Wall.Rows >> cell & 1)
+		}
+		f[i+25] = pp.Score
+		i += 26
 	}
 	for c := range game.NumColors {
 		f[i+c] = int16(s.Center[c])
@@ -70,6 +82,10 @@ func Names() []string {
 			n = append(n, fmt.Sprintf("%s_line%d_%s", who, cell/5+1, game.Color(cell%5)))
 		}
 		n = append(n, who+"_floor", who+"_score")
+		for cell := range 25 {
+			n = append(n, fmt.Sprintf("%s_scored_wall_%d_%d", who, cell/5, cell%5))
+		}
+		n = append(n, who+"_scored_score")
 	}
 	for _, where := range [2]string{"center", "factories"} {
 		for c := range game.NumColors {

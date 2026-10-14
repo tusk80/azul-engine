@@ -134,6 +134,7 @@ the number of occupied floor slots including the first-player token. `bag` and
 ## How strong is it?
 
 For the ideas behind it, see [How the engine works](docs/HOW-IT-WORKS.md).
+For the neural-network evaluation and its results, see [A learned evaluation](docs/ML.md).
 
 Measured in self-play, each deal played twice with seats swapped:
 
