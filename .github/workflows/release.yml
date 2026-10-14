@@ -1,6 +1,7 @@
 name: Release
 
-# Pushing a tag like v0.1.0 builds the binaries and publishes a release.
+# Pushing an annotated tag like v0.1.0 builds the binaries and publishes a
+# release; the tag message becomes the release notes.
 on:
   push:
     tags: ["v*"]
@@ -34,4 +35,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" dist/* --title "$TAG" --generate-notes
+        run: |
+          # checkout may leave the tag lightweight; fetch the annotated one for its message
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          # Re-pushing a tag refreshes the binaries of the existing release.
+          gh release create "$TAG" dist/* --title "$TAG" --notes-from-tag ||
+            gh release upload "$TAG" dist/* --clobber
