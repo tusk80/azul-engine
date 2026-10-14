@@ -141,20 +141,27 @@ async function newDeal() {
     ui.history = [];
     ui.pos = null;
     setPosition(pos);
+    motion.deal();
   });
 }
 
 async function playMove(text) {
   await run(async () => {
-    const r = await api('/apply', { state: ui.pos.state, moves: [text] });
+    const before = ui.pos.state;
+    const from = motion.capture(text);
+    const r = await api('/apply', { state: before, moves: [text] });
     setPosition(r.positions[1], text);
+    motion.move(text, before, r.positions[1].state, from);
   });
 }
 
 async function roundAction(action) {
   await run(async () => {
-    const r = await api('/apply', { state: ui.pos.state, moves: [action] });
+    const before = ui.pos.state;
+    const r = await api('/apply', { state: before, moves: [action] });
     setPosition(r.positions[1], action === 'score' ? 'scored round' : 'dealt next round');
+    if (action === 'deal') motion.deal();
+    else motion.score(before, r.positions[1].state);
   });
 }
 
@@ -212,8 +219,15 @@ async function openLine(i) {
 
 function pvStep(to) {
   if (!ui.pv) return;
-  ui.pv.step = Math.max(0, Math.min(ui.pv.positions.length - 1, to));
+  const { positions, step } = ui.pv;
+  const next = Math.max(0, Math.min(positions.length - 1, to));
+  const p = positions[next];
+  // One step forward is animated like a played move.
+  const from = next === step + 1 && p.move ? motion.capture(p.move.text) : null;
+  ui.pv.step = next;
   render();
+  if (from) motion.move(p.move.text, positions[step].state, p.state, from);
+  else if (next === step + 1 && p.action === 'score') motion.score(positions[step].state, p.state);
 }
 
 // "Play to here": make the line's moves on the real board.
@@ -416,19 +430,7 @@ async function loadExample(i) {
 
 // ------------------------------------------------------------ preferences
 
-function applyTheme(theme) {
-  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-  else delete document.documentElement.dataset.theme;
-}
-
-function toggleTheme() {
-  const dark = document.documentElement.dataset.theme
-    ? document.documentElement.dataset.theme === 'dark'
-    : matchMedia('(prefers-color-scheme: dark)').matches;
-  const next = dark ? 'light' : 'dark';
-  applyTheme(next);
-  store.set('azul.theme', next);
-}
+// The light/dark theme is theme.js's job, on every page.
 
 function applySymbols(on) {
   document.body.classList.toggle('symbols', on);
@@ -442,7 +444,6 @@ function setStatusNote(text) {
 
 // setup reads the engine's limits and the visitor's saved preferences.
 async function setup() {
-  applyTheme(store.get('azul.theme'));
   applySymbols(store.get('azul.symbols') === '1');
   if (store.get('azul.engine') === 'classic') $('engine').value = 'classic';
   $('intro').hidden = store.get('azul.intro') === 'done';
@@ -679,6 +680,162 @@ async function readPhotoWithAI() {
   }
 }
 
+// --------------------------------------------------------------- motion
+
+// Tiles travel the way they would on a real table: from the factory to the
+// pattern line (or floor), the rest of the factory slides to the center, a
+// fresh deal drops into the factories and scored tiles set into the wall.
+// The board is re-rendered from scratch, so each animation measures where
+// tiles were before, then flies copies to where the new render put them.
+// Everything is skipped when the visitor asks for reduced motion.
+const motion = {
+  lastAnalysis: null,
+
+  on() {
+    return !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+
+  // parse reads "F2 red->3" or "C blue->floor".
+  parse(text) {
+    const m = /^(C|F(\d)) (\w+)->(\d|floor)$/.exec(text);
+    return m && { factory: m[2] ? +m[2] - 1 : -1, color: m[3], line: m[4] === 'floor' ? -1 : +m[4] - 1 };
+  },
+
+  // capture records where the move's tiles are now, before the board changes.
+  capture(text) {
+    const mv = this.parse(text);
+    if (!mv || !this.on()) return null;
+    const rect = (el) => ({ color: [...el.classList].find((c) => c.startsWith('t-')).slice(2), r: el.getBoundingClientRect() });
+    if (mv.factory >= 0) {
+      const all = [...document.querySelectorAll(`#table [data-f="${mv.factory}"]`)].map(rect);
+      return { taken: all.filter((t) => t.color === mv.color), rest: all.filter((t) => t.color !== mv.color) };
+    }
+    const taken = [...document.querySelectorAll(`#table [data-c="${mv.color}"]`)].map(rect);
+    const token = document.querySelector('#table [data-c="token"]');
+    return { taken, rest: [], token: token && token.getBoundingClientRect() };
+  },
+
+  // move flies the captured tiles to where the new board shows them.
+  move(text, before, after, from) {
+    if (!from) return;
+    const mv = this.parse(text);
+    const p = before.toMove;
+    const pairs = [];
+    const fb = before.players[p].floor;
+    const fa = after.players[p].floor;
+    const floorTiles = [...document.querySelectorAll(`.pfloor[data-p="${p}"] .fslot .tile`)].slice(fb, fa);
+    let floorQueue = floorTiles;
+    if (from.token && floorQueue.length) {
+      pairs.push([from.token, floorQueue[0]]);
+      floorQueue = floorQueue.slice(1);
+    }
+    let dests = [];
+    if (mv.line >= 0) {
+      const placed = (after.players[p].lines[mv.line].count || 0) - (before.players[p].lines[mv.line].count || 0);
+      const filled = [...document.querySelectorAll(`.prow[data-p="${p}"][data-r="${mv.line}"] .tile`)];
+      dests = filled.slice(0, placed);
+    }
+    dests = dests.concat(floorQueue);
+    from.taken.forEach((t, i) => { if (dests[i]) pairs.push([t.r, dests[i]]); });
+    // The rest of the factory joins the center.
+    const byColor = {};
+    from.rest.forEach((t) => { (byColor[t.color] = byColor[t.color] || []).push(t.r); });
+    for (const [color, rects] of Object.entries(byColor)) {
+      const inCenter = [...document.querySelectorAll(`#table [data-c="${color}"]`)].slice(-rects.length);
+      rects.forEach((r, i) => { if (inCenter[i]) pairs.push([r, inCenter[i]]); });
+    }
+    pairs.forEach(([r, el], i) => this.fly(r, el, i * 45));
+  },
+
+  // fly animates a copy of el from rect r to el's place, on an arc.
+  fly(r, el, delay) {
+    const to = el.getBoundingClientRect();
+    if (!to.width || !r.width) return;
+    const ghost = el.cloneNode(true);
+    ghost.classList.add('flying');
+    ghost.removeAttribute('id');
+    Object.assign(ghost.style, { left: to.left + 'px', top: to.top + 'px', width: to.width + 'px', height: to.height + 'px' });
+    document.body.append(ghost);
+    const dx = r.left - to.left;
+    const dy = r.top - to.top;
+    const s = r.width / to.width;
+    const lift = Math.min(60, 20 + Math.hypot(dx, dy) * 0.12);
+    const turn = (dx > 0 ? -1 : 1) * 12;
+    const duration = 520;
+    ghost.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(${s})` },
+      { transform: `translate(${dx / 2}px, ${dy / 2 - lift}px) scale(${(s + 1) / 2 * 1.08}) rotate(${turn}deg)`, offset: 0.5 },
+      { transform: 'none' },
+    ], { duration, delay, easing: 'cubic-bezier(.45, 0, .2, 1)', fill: 'backwards' }).finished
+      .then(() => ghost.remove(), () => ghost.remove());
+    // A hidden tab pauses animations; never leave a copy behind.
+    setTimeout(() => ghost.remove(), duration + delay + 1500);
+    el.animate([{ opacity: 0 }, { opacity: 0, offset: 0.98 }, { opacity: 1 }], { duration: duration + delay });
+    el.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }],
+      { duration: 220, delay: duration + delay, easing: 'ease-out' });
+  },
+
+  // deal drops the factories' new tiles in, one after another.
+  deal() {
+    if (!this.on()) return;
+    document.querySelectorAll('#table .factory').forEach((fac, f) => {
+      fac.animate([{ transform: 'scale(.9)', opacity: 0.4 }, { transform: 'none', opacity: 1 }],
+        { duration: 400, delay: f * 60, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'backwards' });
+      fac.querySelectorAll('.tile').forEach((t, k) => {
+        t.animate([
+          { transform: 'translateY(-18px) rotate(-20deg) scale(.5)', opacity: 0 },
+          { transform: 'translateY(2px) rotate(4deg) scale(1.04)', opacity: 1, offset: 0.7 },
+          { transform: 'none', opacity: 1 },
+        ], { duration: 460, delay: 120 + f * 60 + k * 45, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'backwards' });
+      });
+    });
+  },
+
+  // score sets newly placed wall tiles into place and counts the scores up.
+  score(before, after) {
+    if (!this.on()) return;
+    let n = 0;
+    after.players.forEach((pl, p) => {
+      pl.wall.forEach((row, r) => {
+        [...row].forEach((ch, col) => {
+          if (ch === '.' || before.players[p].wall[r][col] !== '.') return;
+          const el = document.querySelector(`[data-wall="${p}-${r}-${col}"]`);
+          if (!el) return;
+          el.animate([
+            { transform: 'translateX(-14px) scale(1.5)', opacity: 0 },
+            { transform: 'scale(.92)', opacity: 1, offset: 0.7 },
+            { transform: 'none', opacity: 1 },
+          ], { duration: 420, delay: 80 + n++ * 70, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'backwards' });
+        });
+      });
+      this.count(document.querySelector(`.pscore[data-p="${p}"]`), before.players[p].score, pl.score, 300 + n * 70);
+    });
+  },
+
+  // count runs a score from a to b.
+  count(el, a, b, delay = 0) {
+    if (!el || a === b) return;
+    const start = performance.now() + delay;
+    const dur = 700;
+    const step = (now) => {
+      const t = Math.min(1, Math.max(0, (now - start) / dur));
+      const e = 1 - Math.pow(1 - t, 3);
+      el.textContent = String(Math.round(a + (b - a) * e));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    el.textContent = String(a);
+    requestAnimationFrame(step);
+  },
+
+  // stagger brings a list in one item after another.
+  stagger(items) {
+    if (!this.on()) return;
+    [...items].forEach((el, i) => el.animate(
+      [{ transform: 'translateY(8px)', opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { duration: 380, delay: i * 70, easing: 'cubic-bezier(.2, .8, .2, 1)', fill: 'backwards' }));
+  },
+};
+
 // ------------------------------------------------------------- rendering
 
 function h(tag, attrs, ...children) {
@@ -746,7 +903,6 @@ function p1View(line, toMove) {
 
 function renderEvalBar() {
   const bar = $('evalbar');
-  bar.replaceChildren();
   const pos = ui.pos;
   let frac = 0.5;
   let left = 'P1';
@@ -764,11 +920,26 @@ function renderEvalBar() {
   } else if (ui.thinking) {
     left = 'P1 …';
   }
-  const fill = h('div', { class: 'fill' });
-  fill.style.width = (frac * 100).toFixed(1) + '%';
-  bar.append(
+  // A strip of tiles: player 1's share from the left. Segments keep their
+  // elements between renders, so a change sweeps across them.
+  const SEGS = 24;
+  const n1 = Math.round(frac * SEGS);
+  let track = bar.querySelector('.track');
+  if (!track) {
+    track = h('div', { class: 'track', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Evaluation, player 1 share' });
+    for (let i = 0; i < SEGS; i++) track.append(h('i', { class: 'seg' + (i === SEGS / 2 ? ' mid' : '') }));
+  }
+  track.setAttribute('aria-valuenow', Math.round(frac * 100));
+  [...track.children].forEach((seg, i) => {
+    const want = i < n1;
+    if (seg.classList.contains('p1') === want) return;
+    // Sweep outward from the boundary the bar is moving towards.
+    seg.style.transitionDelay = Math.abs(i - n1) * 18 + 'ms';
+    seg.classList.toggle('p1', want);
+  });
+  bar.replaceChildren(
     h('span', { class: 'label p1c' }, left.trim()),
-    h('div', { class: 'track', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(frac * 100), 'aria-label': 'Evaluation, player 1 share' }, fill, h('div', { class: 'mid' })),
+    track,
     h('span', { class: 'label right p2c' }, right.trim()),
   );
 }
@@ -834,6 +1005,7 @@ function renderTable(state) {
       if (hint && hint.source === 'factory' && hint.factory === f + 1 && hint.color === c) cls += ' hint-src';
       if (canPick || ui.edit) cls += ' clickable';
       fac.append(tile(c, cls, {
+        'data-f': f,
         role: 'button',
         tabindex: canPick || ui.edit ? 0 : -1,
         onclick: () => (ui.edit ? editFactory(f, k) : pick(f, c)),
@@ -844,7 +1016,7 @@ function renderTable(state) {
   });
 
   const center = h('div', { class: 'center', role: 'group', 'aria-label': 'Center' }, h('span', { class: 'num' }, 'center'));
-  if (state.tokenInCenter) center.append(tile('token'));
+  if (state.tokenInCenter) center.append(tile('token', '', { 'data-c': 'token' }));
   const sorted = [...state.center].sort((a, b) => COLORS.indexOf(a) - COLORS.indexOf(b));
   sorted.forEach((c) => {
     let cls = '';
@@ -852,6 +1024,7 @@ function renderTable(state) {
     if (hint && hint.source === 'center' && hint.color === c) cls += ' hint-src';
     if (canPick || ui.edit) cls += ' clickable';
     center.append(tile(c, cls, {
+      'data-c': c,
       role: 'button',
       tabindex: canPick || ui.edit ? 0 : -1,
       onclick: () => (ui.edit ? editCenterRemove(c) : pick('C', c)),
@@ -899,12 +1072,12 @@ function renderPlayers(pos) {
     const scoreEl = ui.edit
       ? h('input', { type: 'number', min: 0, max: 500, value: p.score, 'aria-label': `P${i + 1} score`, onchange: (e) => { ui.draft.players[i].score = Math.max(0, +e.target.value | 0); edited(); } })
       : String(p.score);
-    const board = h('div', { class: 'pboard' + (toMove ? ' tomove' : '') },
+    const board = h('div', { class: `pboard p${i + 1}b` + (toMove ? ' tomove' : '') },
       h('div', { class: 'phead' },
         h('span', { class: `pname p${i + 1}` }, `Player ${i + 1}`),
         toMove ? h('span', { class: 'badge on' }, 'to move') : null,
         hasToken ? h('span', { class: 'badge' }, 'first player') : null,
-        h('span', { class: 'pscore' }, scoreEl)),
+        h('span', { class: 'pscore', 'data-p': i }, scoreEl)),
     );
 
     const lines = h('div', { class: 'plines', role: 'group', 'aria-label': `Player ${i + 1} pattern lines` });
@@ -914,7 +1087,7 @@ function renderPlayers(pos) {
       const count = l.count || 0;
       const legal = choosing && lineLegal(p, r, ui.sel.color);
       const target = hintPlayer === i && hint && !hint.floor && hint.line === r + 1;
-      const row = h('div', { class: 'prow' + (legal ? ' legal' : '') + (target ? ' target' : '') });
+      const row = h('div', { class: 'prow' + (legal ? ' legal' : '') + (target ? ' target' : ''), 'data-p': i, 'data-r': r });
       for (let j = 0; j < 5; j++) {
         if (j < 4 - r) {
           row.append(h('div', { class: 'lcell' }));
@@ -931,6 +1104,7 @@ function renderPlayers(pos) {
       for (let col = 0; col < 5; col++) {
         const on = p.wall[r][col] !== '.';
         wall.append(tile(wallColor(r, col), (on ? '' : 'ghost') + (ui.edit ? ' clickable' : ''), {
+          'data-wall': `${i}-${r}-${col}`,
           onclick: ui.edit ? () => editWall(i, r, col) : null,
           'aria-label': `${wallColor(r, col)} ${on ? 'placed' : 'empty'}`,
         }));
@@ -940,7 +1114,7 @@ function renderPlayers(pos) {
 
     const floorLegal = choosing;
     const floorTarget = hintPlayer === i && hint && hint.floor;
-    const floor = h('div', { class: 'pfloor' + (floorLegal ? ' legal' : '') + (floorTarget ? ' target' : ''), role: 'group', 'aria-label': `Player ${i + 1} floor` });
+    const floor = h('div', { class: 'pfloor' + (floorLegal ? ' legal' : '') + (floorTarget ? ' target' : ''), 'data-p': i, role: 'group', 'aria-label': `Player ${i + 1} floor` });
     for (let k = 0; k < 7; k++) {
       const onClick = ui.edit ? () => editFloor(i, k) : floorLegal ? () => playMove(selText('floor')) : null;
       floor.append(h('div', { class: 'fslot', onclick: onClick },
@@ -1011,7 +1185,7 @@ function renderAnalysis() {
   if (ui.analysisErr) return box.append(h('div', { class: 'err' }, ui.analysisErr));
   if (!ui.analysis) {
     return box.append(ui.thinking
-      ? h('div', { class: 'thinking' }, 'Thinking…')
+      ? h('div', { class: 'thinking' }, h('span', { class: 'loader', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'), h('i'), h('i')), 'Thinking…')
       : h('div', { class: 'meta' }, 'Press Analyze to see the best moves.'));
   }
   const a = ui.analysis;
@@ -1028,6 +1202,10 @@ function renderAnalysis() {
     ));
   });
   box.append(lines);
+  if (a !== motion.lastAnalysis) {
+    motion.lastAnalysis = a;
+    motion.stagger(lines.children);
+  }
   box.append(h('div', { class: 'meta' },
     `${a.engine === 'neural' ? 'Neural network' : 'Classic'} · P${pos.state.toMove + 1}'s view · depth ${a.depth}${a.exact ? ', solved to round end' : ''} · ${(a.nodes / 1e6).toFixed(1)}M nodes in ${(a.timeMs / 1000).toFixed(1)} s`));
 }
@@ -1122,7 +1300,6 @@ $('engine').addEventListener('change', () => {
   if ($('auto').checked) analyze();
 });
 $('btn-share').addEventListener('click', share);
-$('btn-theme').addEventListener('click', toggleTheme);
 $('btn-help').addEventListener('click', () => $('help-dialog').showModal());
 $('examples').addEventListener('change', (e) => {
   if (e.target.value !== '') loadExample(+e.target.value);

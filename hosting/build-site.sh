@@ -10,7 +10,7 @@ out=${1:-site}
 rm -rf "$out"
 mkdir -p "$out"
 
-cp internal/server/ui/* "$out"/
+cp -r internal/server/ui/. "$out"/
 # Tell the page its engine is the WebAssembly one, so it does not look for a server.
 sed -i 's/<html lang="en">/<html lang="en" data-engine="wasm">/' "$out/index.html"
 grep -q 'data-engine="wasm"' "$out/index.html"

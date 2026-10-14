@@ -40,7 +40,8 @@ def hbars(rows, lo, hi, unit="Elo", row_h=34, bar_h=16, series=None):
         for v, err, cls, name in bars:
             x0, x1 = sorted((x(0), x(v)))
             # 4px rounded data end, square at the baseline: draw rounded rect + square patch at the zero side
-            out.append(f'<g class="bar {cls}"><title>{esc(label)}, {esc(name)}: {v:+d} ± {err} {unit}</title>')
+            neg = " neg" if v < 0 else ""
+            out.append(f'<g class="bar {cls}{neg}"><title>{esc(label)}, {esc(name)}: {v:+d} ± {err} {unit}</title>')
             out.append(f'<rect x="{x0:.1f}" y="{y}" width="{max(x1 - x0, 1):.1f}" height="{bar_h}" rx="4"/>')
             if x1 - x0 > 8:
                 px = x0 if v >= 0 else x1 - 6
@@ -98,7 +99,7 @@ feature_chart = hbars([
 target_chart = hbars([
     ("Search value only", [(-127, 36, "know", "")]),
     ("Outcome only", [(-84, 35, "know", "")]),
-    ("25% value, 75% outcome", [(-63, 34, "know", "")]),
+    ("¼ value, ¾ outcome", [(-63, 34, "know", "")]),
     ("Half and half", [(-7, 34, "neural", "")]),
 ], -200, 50)
 
@@ -109,7 +110,7 @@ html = f"""<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Neural vs Classic — Azul Engine</title>
   <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +64 Elo at equal time.">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Neural network vs classic: which Azul engine is stronger?">
   <meta property="og:description" content="A small network trained on self-play beats the hand-tuned engine: 59% of 3,000 games at equal thinking time.">
@@ -118,6 +119,7 @@ html = f"""<!doctype html>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
   <script src="theme.js"></script>
+  <script src="compare.js" defer></script>
 </head>
 <body class="cmp">
   <header class="topbar">

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Azul Engine — best-move analysis board</title>
   <meta name="description" content="Find the best move in any 2-player Azul position. Set up a board, see the top moves with a point breakdown, and step through each line of play.">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Azul Engine — best-move analysis board">
   <meta property="og:description" content="Set up any 2-player Azul position and see the best moves, with a point breakdown and the line of play behind each one.">
@@ -14,6 +14,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -82,6 +83,16 @@
       <div id="table" class="table"></div>
       <div id="players" class="players"></div>
       <div id="status" class="status" role="status"></div>
+      <a class="promo" href="compare.html">
+        <span class="kicker">New: a neural network brain</span>
+        <div>
+          <h3>The engine taught a neural network, and the network beat it.</h3>
+          <p>It learned from 1.5 million positions the engine played against itself, then won 59% of 3,000 games against the hand-tuned engine at equal thinking time.</p>
+        </div>
+        <span class="go">See the results</span>
+        <span class="race" aria-hidden="true"><i class="n"></i><i class="d"></i><i class="c"></i></span>
+        <span class="legend-row"><span>Neural network: 1,757 wins</span><span>Classic: 1,212 wins</span></span>
+      </a>
     </section>
 
     <aside class="side-col" aria-label="Analysis">
