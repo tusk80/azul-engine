@@ -1,0 +1,30 @@
+<!--
+title: Building a game engine for Azul
+date: 2026-09-24
+summary: Exact rules, an alpha-beta search that solves rounds to the end, and an evaluation tuned by self-play. The classic engine the neural network later had to beat.
+tags: Search algorithms, Go, Self-play tuning
+-->
+<p>Azul is a tile-drafting board game: players take tiles from shared factories, build pattern lines, and score when tiles move to their wall. It has no hidden information within a round, a branching factor in the dozens, and a random deal between rounds. That makes it a good fit for the classic recipe from chess engines: exact rules, a game-tree search, and a function that judges positions the search cannot see to the end.</p>
+
+<h2>Rules first, and fast</h2>
+<p>The whole game state fits in about 110 bytes with no pointers, so the search copies positions instead of undoing moves. Walls are 25-bit masks stored twice, row-major and transposed, so scoring a placement is a couple of bit operations. Factories are kept as a multiset, so two factories holding the same tiles generate their moves once. The move generator is checked by perft counts, the same technique chess programmers use: count every move sequence to a fixed depth and compare.</p>
+
+<h2>The search</h2>
+<p>The engine runs negamax with principal-variation search, iterative deepening, a transposition table, killer moves and a history heuristic. Within a round there is no randomness, so late in a round it searches every line to the round's end and scores it exactly. Tests compare it against a plain alpha-beta reference and against brute force, and were mutation-tested: five deliberately planted bugs were all caught.</p>
+
+<h2>Judging what it cannot see</h2>
+<p>Before the end of a round, positions are judged by an evaluation function: the score if the round ended now, plus terms for partly built lines, wall shape and bonus potential. Its fifteen weights were tuned by SPSA, a stochastic optimiser that nudges all weights at once and keeps the direction that wins more self-play games.</p>
+<table class="cmp-table">
+  <thead><tr><th>Evaluation</th><th>Result in self-play</th></tr></thead>
+  <tbody>
+    <tr><td>First tuned weights vs points only</td><td>+298 Elo</td></tr>
+    <tr><td>Three new terms, retuned</td><td>+158 ± 14 Elo</td></tr>
+    <tr><td>One more term, retuned</td><td>about +30 Elo</td></tr>
+    <tr><td>Sampling next round's deal at round ends</td><td>−10 to −50 Elo (kept off)</td></tr>
+  </tbody>
+</table>
+<p>Every change was adopted only after thousands of paired games, each deal played twice with the seats swapped so luck cancels out. The last row is the honest one: an idea that sounded right, measured as a loss, and stayed switched off.</p>
+
+<h2>Everywhere at once</h2>
+<p>The same Go code runs as a native binary with an HTTP API and as WebAssembly in a Web Worker, so the <a href="/">analysis board</a> works on a static host with no backend. In the browser it searches about 1.1 million positions per second, a third of native speed.</p>
+<p>That was the engine. The next question was whether a neural network could learn to judge positions better than fifteen hand-picked terms.</p>

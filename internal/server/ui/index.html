@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Azul Engine — best-move analysis board</title>
-  <meta name="description" content="Find the best move in any 2-player Azul position. Set up a board, see the top moves with a point breakdown, and step through each line of play.">
+  <title>Azul Engine — AI analysis board with a neural network</title>
+  <meta name="description" content="Find the best move in any 2-player Azul position with a game AI: alpha-beta search and a machine-learning neural network trained on 1.5 million self-play positions. Free, in your browser.">
   <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Azul Engine — best-move analysis board">
-  <meta property="og:description" content="Set up any 2-player Azul position and see the best moves, with a point breakdown and the line of play behind each one.">
+  <meta property="og:title" content="Azul Engine — AI analysis board with a neural network">
+  <meta property="og:description" content="Set up any 2-player Azul position and see the best moves from a search engine with a machine-learning brain: a neural network that beats the hand-tuned engine in two games of three.">
   <meta property="og:url" content="https://azul.yesil.cc/">
   <meta property="og:image" content="https://azul.yesil.cc/og.png">
   <meta name="twitter:card" content="summary_large_image">
@@ -93,26 +93,50 @@
         <span class="race" aria-hidden="true"><i class="n"></i><i class="d"></i><i class="c"></i></span>
         <span class="legend-row"><span>Neural network: 1,955 wins</span><span>Classic: 1,020 wins</span></span>
       </a>
+      <!-- devlog: written by blog/build.py -->
+      <section class="devlog" aria-label="Dev log">
+        <div class="devlog-head"><h2>From the dev log</h2><a class="btn" href="blog.html">All posts</a></div>
+        <div class="devlog-grid">
+        <a class="post-card" href="blog/03-nnue-speed.html">
+          <span class="post-meta"><time datetime="2026-10-15">15 October 2026</time><span class="tag">Performance engineering</span></span>
+          <h3>Speed is strength: an NNUE-style evaluator in Go</h3>
+          <p>Updating only what a move changes, in exact integer arithmetic, made the network three times faster and worth 50 Elo more, with the same weights.</p>
+        </a>
+        <a class="post-card" href="blog/02-neural-network.html">
+          <span class="post-meta"><time datetime="2026-10-14">14 October 2026</time><span class="tag">Machine learning</span></span>
+          <h3>Teaching a neural network to judge Azul</h3>
+          <p>1.5 million self-play positions, a network trained from scratch in Go and again in PyTorch on a GPU, and the one feature that turned a tie into a win.</p>
+        </a>
+        <a class="post-card" href="blog/01-engine.html">
+          <span class="post-meta"><time datetime="2026-09-24">24 September 2026</time><span class="tag">Search algorithms</span></span>
+          <h3>Building a game engine for Azul</h3>
+          <p>Exact rules, an alpha-beta search that solves rounds to the end, and an evaluation tuned by self-play. The classic engine the neural network later had to beat.</p>
+        </a>
+        </div>
+      </section>
+      <!-- /devlog -->
     </section>
 
     <aside class="side-col" aria-label="Analysis">
       <div class="panel">
         <div class="panel-head">
           <h2>Engine</h2>
-          <label title="Which judgement the search uses">Brain
-            <select id="engine">
-              <option value="neural">Neural network</option>
-              <option value="classic">Classic</option>
-            </select>
-          </label>
+          <select id="engine" hidden>
+            <option value="neural">Neural network</option>
+            <option value="classic">Classic</option>
+          </select>
           <label>Think
             <select id="think"></select>
           </label>
           <label title="Analyse every new position"><input type="checkbox" id="auto" checked> Auto</label>
           <button id="btn-analyze" class="primary">Analyze</button>
         </div>
+        <div class="brain" role="group" aria-label="Which brain judges positions">
+          <button type="button" class="seg" data-engine="neural" aria-pressed="true"><span class="ml">ML</span>Neural network</button>
+          <button type="button" class="seg" data-engine="classic" aria-pressed="false">Classic</button>
+        </div>
+        <a class="brain-note" href="compare.html">A machine-learning brain: a neural network trained on 1.5 million self-play positions, <b>+112 Elo</b> over the hand-tuned engine. <span class="go">See the benchmark</span></a>
         <div id="analysis"></div>
-        <a class="compare-link" href="compare.html">Neural network or classic: which is stronger?</a>
       </div>
 
       <div id="pv-panel" class="panel" hidden>
@@ -140,6 +164,8 @@
 
   <footer class="foot">
     <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="compare.html">Neural vs classic</a>
+    <a href="blog.html">Dev log</a>
     <a href="https://github.com/tusk80/azul-engine/releases/latest" rel="noopener">Download for your computer</a>
     <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
     <span id="version"></span>
@@ -170,7 +196,7 @@
         <dt>Copy a real game</dt>
         <dd><em>Edit board</em>, pick a color, then click factory slots, line cells, wall cells and floor slots. The board tells you if a position is impossible.</dd>
         <dt>Choose a brain</dt>
-        <dd><em>Neural network</em> judges positions with a network trained on 1.5 million self-play positions; <em>Classic</em> uses hand-written rules. The network wins more often; <a href="compare.html">see the numbers</a>.</dd>
+        <dd><em>Neural network</em> judges positions with a machine-learning model trained on 1.5 million self-play positions; <em>Classic</em> uses hand-written rules. The network wins two games in three; <a href="compare.html">see the benchmark</a>.</dd>
         <dt>Read the engine</dt>
         <dd>The number is the expected lead in points for the player to move. Chips show what the move does right now: wall points, bonuses, floor penalty.</dd>
         <dt>Explore a line</dt>

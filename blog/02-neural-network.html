@@ -1,0 +1,34 @@
+<!--
+title: Teaching a neural network to judge Azul
+date: 2026-10-14
+summary: 1.5 million self-play positions, a network trained from scratch in Go and again in PyTorch on a GPU, and the one feature that turned a tie into a win.
+tags: Machine learning, Neural networks, PyTorch, Go
+-->
+<p>The classic engine judges positions with fifteen terms a human chose and self-play tuned. The machine-learning question: can a model learn a better judgement from the engine's own games, with no Azul knowledge written in?</p>
+
+<h2>The data pipeline</h2>
+<p>A new command, <code>azul gendata</code>, plays the engine against itself on every CPU core. 30,000 games gave 1.55 million positions in seven minutes. Each position becomes 170 small integers seen from the side to move: walls, pattern lines, floors, scores and the tiles left on the table. Each carries three labels: the search's value, the final score margin and who won. Five percent of moves are random, so games do not all follow the same habits.</p>
+
+<h2>The model, twice</h2>
+<p>The model is a small multilayer perceptron: 170 inputs, two hidden ReLU layers, one output predicting the final margin in points. I trained it two ways on the same data, split and target:</p>
+<ul>
+  <li><b>From scratch in Go</b>, with no libraries: forward pass, backpropagation, Adam and data-parallel minibatches over CPU cores, about 300 lines. A gradient-check test compares backpropagation against numerical derivatives.</li>
+  <li><b>In PyTorch</b>, on an RTX 5070 with CUDA, as a benchmark and a cross-check.</li>
+</ul>
+<table class="cmp-table">
+  <thead><tr><th></th><th>Go, CPU</th><th>PyTorch, GPU</th></tr></thead>
+  <tbody>
+    <tr><td>Training, 64 × 16 network</td><td>19 s</td><td>24 s</td></tr>
+    <tr><td>Training, 128 × 32 network</td><td>42 s</td><td>22 s</td></tr>
+    <tr><td>Validation error (points²)</td><td>153.0</td><td>153.2</td></tr>
+  </tbody>
+</table>
+<p>The two agree to the decimal, which also proves the hand-written training. For a network this small the GPU does not help: each step is too little work to outweigh moving the batch.</p>
+
+<h2>What the model sees decides everything</h2>
+<p>The first network, given only the raw board, tied the classic engine: −7 ± 34 Elo. Then I added one group of features: the board <em>as it would look if the round were scored now</em>, which the classic evaluation also uses. Same network, same data size: <b>+141 ± 13 Elo</b> at equal positions searched. Feature engineering beat model size.</p>
+<p>The training target mattered too. Learning only the search's opinion, or only who won, both did worse than half and half (−127 and −84 Elo against −7 on the raw board).</p>
+
+<h2>Strength at equal time</h2>
+<p>A network judges better but costs more per position. At 40 ms per move the 64 × 16 network beat the classic engine by +64 ± 13 Elo over 3,000 games, and the bigger 128 × 32 network, though it knew more, was too slow to win at all. Making the network fast became the next problem; see <a href="03-nnue-speed.html">the next post</a>.</p>
+<p>All numbers are reproducible with the commands in the <a href="https://github.com/tusk80/azul-engine/blob/main/docs/ML.md" rel="noopener">technical write-up</a>.</p>

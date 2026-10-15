@@ -11,7 +11,7 @@ positions by playing itself, a small neural network learned from them, and in
 3,000 games at equal thinking time **the network beat the hand-tuned evaluation
 it learned from**.
 
-**[Try it in your browser](https://azul.yesil.cc)** · **[Neural vs classic: the results](https://azul.yesil.cc/compare.html)** · [Technical write-up](docs/ML.md)
+**[Try it in your browser](https://azul.yesil.cc)** · **[Neural vs classic: the benchmark](https://azul.yesil.cc/compare.html)** · [Dev log](https://azul.yesil.cc/blog.html) · [Technical write-up](docs/ML.md)
 
 | Neural network vs hand-tuned evaluation | Result |
 |---|---|
@@ -20,6 +20,20 @@ it learned from**.
 | Equal positions searched | **+141 ± 13 Elo** (3,000 games, 128 × 32 network) |
 
 ![The analysis board with the neural network's top three moves](docs/screenshot.png)
+
+## Highlights
+
+- **Machine learning:** supervised learning on 1.5M self-play positions, feature
+  engineering that turned a tie into +141 Elo, a training target study, and a
+  neural network trained from scratch in Go and benchmarked against PyTorch/CUDA.
+- **Performance engineering:** an NNUE-style evaluator with an incremental,
+  fixed-point first layer: 3.1× faster inference, worth +50 Elo with the same weights.
+- **Algorithms:** alpha-beta (PVS) search with a transposition table, exact
+  round solving, and SPSA parameter tuning.
+- **Rigour:** every strength claim measured in thousands of paired games with
+  confidence intervals; gradient checks, perft and brute-force tests.
+- **Shipping:** one Go codebase as a CLI, an HTTP API and WebAssembly in the
+  browser; CI, tagged releases and a static deploy to Cloudflare.
 
 ## What's inside
 
@@ -199,6 +213,7 @@ internal/
   api/         requests and responses, shared by server and browser
   server/      HTTP API and the web pages (server/ui)
 ml/            PyTorch trainer and the results page generator
+blog/          dev log posts; python blog/build.py writes their pages
 docs/          how the engine works, the ML write-up
 hosting/       static site build and Cloudflare config
 userscript/    the buddyboardgames.com overlay

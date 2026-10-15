@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Building a game engine for Azul · Azul Engine dev log</title>
+  <meta name="description" content="Exact rules, an alpha-beta search that solves rounds to the end, and an evaluation tuned by self-play. The classic engine the neural network later had to beat.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Building a game engine for Azul · Azul Engine dev log">
+  <meta property="og:description" content="Exact rules, an alpha-beta search that solves rounds to the end, and an evaluation tuned by self-play. The classic engine the neural network later had to beat.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog/01-engine.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="../blog.html">All posts</a>
+      <a class="btn" href="../compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <article class="post">
+      <p class="post-meta"><time datetime="2026-09-24">24 September 2026</time><span class="tag">Search algorithms</span><span class="tag">Go</span><span class="tag">Self-play tuning</span></p>
+      <h1>Building a game engine for Azul</h1>
+      <p class="lede">Exact rules, an alpha-beta search that solves rounds to the end, and an evaluation tuned by self-play. The classic engine the neural network later had to beat.</p>
+      <p>Azul is a tile-drafting board game: players take tiles from shared factories, build pattern lines, and score when tiles move to their wall. It has no hidden information within a round, a branching factor in the dozens, and a random deal between rounds. That makes it a good fit for the classic recipe from chess engines: exact rules, a game-tree search, and a function that judges positions the search cannot see to the end.</p>
+
+<h2>Rules first, and fast</h2>
+<p>The whole game state fits in about 110 bytes with no pointers, so the search copies positions instead of undoing moves. Walls are 25-bit masks stored twice, row-major and transposed, so scoring a placement is a couple of bit operations. Factories are kept as a multiset, so two factories holding the same tiles generate their moves once. The move generator is checked by perft counts, the same technique chess programmers use: count every move sequence to a fixed depth and compare.</p>
+
+<h2>The search</h2>
+<p>The engine runs negamax with principal-variation search, iterative deepening, a transposition table, killer moves and a history heuristic. Within a round there is no randomness, so late in a round it searches every line to the round's end and scores it exactly. Tests compare it against a plain alpha-beta reference and against brute force, and were mutation-tested: five deliberately planted bugs were all caught.</p>
+
+<h2>Judging what it cannot see</h2>
+<p>Before the end of a round, positions are judged by an evaluation function: the score if the round ended now, plus terms for partly built lines, wall shape and bonus potential. Its fifteen weights were tuned by SPSA, a stochastic optimiser that nudges all weights at once and keeps the direction that wins more self-play games.</p>
+<table class="cmp-table">
+  <thead><tr><th>Evaluation</th><th>Result in self-play</th></tr></thead>
+  <tbody>
+    <tr><td>First tuned weights vs points only</td><td>+298 Elo</td></tr>
+    <tr><td>Three new terms, retuned</td><td>+158 ± 14 Elo</td></tr>
+    <tr><td>One more term, retuned</td><td>about +30 Elo</td></tr>
+    <tr><td>Sampling next round's deal at round ends</td><td>−10 to −50 Elo (kept off)</td></tr>
+  </tbody>
+</table>
+<p>Every change was adopted only after thousands of paired games, each deal played twice with the seats swapped so luck cancels out. The last row is the honest one: an idea that sounded right, measured as a loss, and stayed switched off.</p>
+
+<h2>Everywhere at once</h2>
+<p>The same Go code runs as a native binary with an HTTP API and as WebAssembly in a Web Worker, so the <a href="/">analysis board</a> works on a static host with no backend. In the browser it searches about 1.1 million positions per second, a third of native speed.</p>
+<p>That was the engine. The next question was whether a neural network could learn to judge positions better than fifteen hand-picked terms.</p>
+    </article>
+    <nav class="post-nav"><span></span><a href="02-neural-network.html">Teaching a neural network to judge Azul →</a></nav>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>

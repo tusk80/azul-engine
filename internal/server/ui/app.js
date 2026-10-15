@@ -446,6 +446,7 @@ function setStatusNote(text) {
 async function setup() {
   applySymbols(store.get('azul.symbols') === '1');
   if (store.get('azul.engine') === 'classic') $('engine').value = 'classic';
+  syncBrain();
   $('intro').hidden = store.get('azul.intro') === 'done';
 
   EXAMPLES.forEach((e, i) => $('examples').append(h('option', { value: i }, e.name)));
@@ -1295,7 +1296,17 @@ $('think').addEventListener('change', () => {
   store.set('azul.think', $('think').value);
   if ($('auto').checked) analyze();
 });
+// The brain buttons drive the hidden select, which the rest of the page reads.
+function syncBrain() {
+  document.querySelectorAll('.brain .seg').forEach((b) => b.setAttribute('aria-pressed', b.dataset.engine === $('engine').value));
+}
+document.querySelectorAll('.brain .seg').forEach((b) => b.addEventListener('click', () => {
+  if ($('engine').value === b.dataset.engine) return;
+  $('engine').value = b.dataset.engine;
+  $('engine').dispatchEvent(new Event('change'));
+}));
 $('engine').addEventListener('change', () => {
+  syncBrain();
   store.set('azul.engine', $('engine').value);
   if ($('auto').checked) analyze();
 });

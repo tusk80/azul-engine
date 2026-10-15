@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speed is strength: an NNUE-style evaluator in Go · Azul Engine dev log</title>
+  <meta name="description" content="Updating only what a move changes, in exact integer arithmetic, made the network three times faster and worth 50 Elo more, with the same weights.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Speed is strength: an NNUE-style evaluator in Go · Azul Engine dev log">
+  <meta property="og:description" content="Updating only what a move changes, in exact integer arithmetic, made the network three times faster and worth 50 Elo more, with the same weights.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog/03-nnue-speed.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="../blog.html">All posts</a>
+      <a class="btn" href="../compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <article class="post">
+      <p class="post-meta"><time datetime="2026-10-15">15 October 2026</time><span class="tag">Performance engineering</span><span class="tag">Machine learning</span><span class="tag">Go</span></p>
+      <h1>Speed is strength: an NNUE-style evaluator in Go</h1>
+      <p class="lede">Updating only what a move changes, in exact integer arithmetic, made the network three times faster and worth 50 Elo more, with the same weights.</p>
+      <p>After training, the network judged positions better than the hand-written evaluation but took 2,161 ns per searched position against 309. In a game engine that matters: with the same thinking time, a slower judge sees fewer positions. Chess engines solved this with NNUE, an efficiently updatable neural network. This post applies the same idea in plain Go.</p>
+
+<h2>Measure first</h2>
+<p>A benchmark that runs the real search, not one evaluation in a loop, showed where the time went: 83% in the network's forward pass, 15% turning the position into features. The search evaluates positions that differ by a move or two, sibling after sibling, yet every evaluation recomputed the first layer from scratch.</p>
+
+<h2>Three changes</h2>
+<ul>
+  <li><b>Incremental first layer.</b> The evaluator keeps the first layer's sums from its last call and applies only the rows of inputs that changed, usually a handful out of 170. If more than 24 changed, a fresh pass is cheaper and it does that instead.</li>
+  <li><b>Exact integers.</b> Floating-point sums drift after thousands of updates. The first layer runs in fixed-point integers, with the input scaling folded into the weights, so an update is exact. A test walks thousands of positions and checks the incremental result equals a fresh one every time, and stays within 0.02 points of the float network.</li>
+  <li><b>Sparse second layer.</b> After ReLU about half the first-layer units are zero, so the second layer reads only the active ones, with its weights transposed to make that a straight run through memory.</li>
+</ul>
+
+<h2>Results</h2>
+<table class="cmp-table">
+  <thead><tr><th></th><th>ns per position</th><th>vs classic, 40 ms per move</th></tr></thead>
+  <tbody>
+    <tr><td>Classic evaluation</td><td>309</td><td></td></tr>
+    <tr><td>Network, first version</td><td>2,161</td><td>+64 ± 13 Elo</td></tr>
+    <tr><td>Network, incremental</td><td><b>704</b></td><td><b>+112 ± 13 Elo</b></td></tr>
+  </tbody>
+</table>
+<p>The same weights, 3.1 times faster, worth about 50 Elo: the network now takes 66% of the points against the hand-tuned engine over 3,000 games. The speed-up also rescued the bigger network, from +6 to +135 at equal time. Head to head it ties the small one (−10 ± 12 over 3,000 games), so the board keeps the lighter 64 × 16 network, which also runs faster in the browser.</p>
+<p>Next: the network plays itself, a new network learns from those games, and each generation has to beat its parent. That loop is running now on a remote server.</p>
+    </article>
+    <nav class="post-nav"><a href="02-neural-network.html">← Teaching a neural network to judge Azul</a><span></span></nav>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>

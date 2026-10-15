@@ -135,6 +135,7 @@ html = f"""<!doctype html>
       </span>
     </a>
     <nav class="actions">
+      <a class="btn" href="blog.html">Dev log</a>
       <a class="btn primary" href="/">Open the board</a>
       <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
     </nav>
@@ -142,7 +143,7 @@ html = f"""<!doctype html>
 
   <main class="cmp-main">
     <section class="cmp-hero">
-      <p class="eyebrow">Two brains, one search</p>
+      <p class="eyebrow">Machine learning benchmark · two brains, one search</p>
       <h1>The neural network wins.</h1>
       <p class="lede">The engine can judge positions two ways: with <strong>classic</strong> rules written and tuned by hand,
         or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself.
@@ -220,7 +221,7 @@ html = f"""<!doctype html>
         <div><h3><span class="sw neural"></span>Neural network</h3><p>The stronger player, and the default. Use it when you want the best move.</p></div>
         <div><h3><span class="sw classic"></span>Classic</h3><p>Every term is a readable rule you can look up. Use it to see how a hand-built judgement thinks, or to compare the two on a position.</p></div>
       </div>
-      <p><a class="btn primary" href="/">Try both on the board</a> <a class="btn" href="https://github.com/tusk80/azul-engine/blob/main/docs/ML.md" rel="noopener">Full write-up and code</a></p>
+      <p><a class="btn primary" href="/">Try both on the board</a> <a class="btn" href="blog.html">Read the dev log</a> <a class="btn" href="https://github.com/tusk80/azul-engine/blob/main/docs/ML.md" rel="noopener">Technical write-up and code</a></p>
     </section>
 
     <details class="cmp-card">
