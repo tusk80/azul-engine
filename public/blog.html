@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dev log · Azul Engine</title>
+  <meta name="description" content="Notes from building a game AI: search, machine learning and performance engineering in Go.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Dev log · Azul Engine">
+  <meta property="og:description" content="Notes from building a game AI: search, machine learning and performance engineering in Go.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="blog.html">All posts</a>
+      <a class="btn" href="compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <section class="cmp-hero">
+      <p class="eyebrow">Dev log</p>
+      <h1>Building a game AI, one experiment at a time.</h1>
+      <p class="lede">Notes from building an Azul engine: search algorithms, a machine-learning pipeline from self-play data to a trained neural network, and the performance engineering that makes it play well in real time. Every claim comes with a measurement.</p>
+    </section>
+    <section class="post-list">
+      <a class="post-card" href="blog/03-nnue-speed.html">
+        <span class="post-meta"><time datetime="2026-10-15">15 October 2026</time><span class="tag">Performance engineering</span><span class="tag">Machine learning</span><span class="tag">Go</span></span>
+        <h2>Speed is strength: an NNUE-style evaluator in Go</h2>
+        <p>Updating only what a move changes, in exact integer arithmetic, made the network three times faster and worth 50 Elo more, with the same weights.</p>
+      </a>
+      <a class="post-card" href="blog/02-neural-network.html">
+        <span class="post-meta"><time datetime="2026-10-14">14 October 2026</time><span class="tag">Machine learning</span><span class="tag">Neural networks</span><span class="tag">PyTorch</span><span class="tag">Go</span></span>
+        <h2>Teaching a neural network to judge Azul</h2>
+        <p>1.5 million self-play positions, a network trained from scratch in Go and again in PyTorch on a GPU, and the one feature that turned a tie into a win.</p>
+      </a>
+      <a class="post-card" href="blog/01-engine.html">
+        <span class="post-meta"><time datetime="2026-09-24">24 September 2026</time><span class="tag">Search algorithms</span><span class="tag">Go</span><span class="tag">Self-play tuning</span></span>
+        <h2>Building a game engine for Azul</h2>
+        <p>Exact rules, an alpha-beta search that solves rounds to the end, and an evaluation tuned by self-play. The classic engine the neural network later had to beat.</p>
+      </a>
+    </section>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>
