@@ -575,7 +575,8 @@ func cmdGendata(args []string) error {
 		close(next)
 	}()
 	total := 0
-	for range *games {
+	lastReport := start
+	for g := range *games {
 		for _, r := range <-done {
 			for _, v := range r.Features {
 				w.WriteString(strconv.Itoa(int(v)))
@@ -583,6 +584,14 @@ func cmdGendata(args []string) error {
 			}
 			fmt.Fprintf(w, "%d,%d,%d\n", r.Eval, r.Margin, r.Result)
 			total++
+		}
+		// A progress line every 30 seconds, for long runs watched from a log.
+		if now := time.Now(); now.Sub(lastReport) >= 30*time.Second {
+			lastReport = now
+			el := now.Sub(start)
+			eta := time.Duration(float64(el) / float64(g+1) * float64(*games-g-1))
+			fmt.Fprintf(os.Stderr, "progress: %d/%d games, %d positions, %s elapsed, about %s left\n",
+				g+1, *games, total, el.Round(time.Second), eta.Round(time.Minute))
 		}
 	}
 	fmt.Printf("%d positions from %d games in %s -> %s\n", total, *games, time.Since(start).Round(time.Second), *out)
