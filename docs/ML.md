@@ -42,8 +42,9 @@ the hand-written eval also uses) gave the jump:
 | Raw board, 128×32 | −7 ± 34 Elo (400 games) |
 | Raw + scored-now board, 128×32 | **+141 ± 13 Elo** (3000 games) |
 
-**Smaller is stronger in real time.** A bigger network knows more but costs
-more per position, so the search sees fewer positions:
+**Smaller was stronger in real time, at first.** A bigger network knows more
+but costs more per position, so the search sees fewer positions. These are the
+first version's numbers, before the speed-up below:
 
 | Network | Equal nodes | Equal time, 40 ms/move |
 |---|---|---|
@@ -51,8 +52,32 @@ more per position, so the search sees fewer positions:
 | 64×16 | +114 ± 25 | **+64 ± 13** (3000 games) |
 | 32×16 | +96 ± 25 | +62 ± 24 |
 
-At 200 ms per move the 64×16 network is **+110 ± 35 Elo** (400 games): the
+At 200 ms per move the 64×16 network was **+110 ± 35 Elo** (400 games): the
 more time each side has, the more the better judgement counts.
+
+**Speed is strength.** The first version cost 2,161 ns per searched position
+against the classic eval's 309 (search benchmark, `go test ./internal/nn -bench
+Search`). The evaluator now runs the network the way chess engines run NNUE:
+
+- The search evaluates positions that differ by a move or two, so the first
+  layer is kept between calls and only the rows of inputs that changed are
+  applied (a fresh pass if more than 24 changed).
+- That layer works in fixed-point integers with the input scaling folded into
+  the weights, so thousands of updates add up exactly: a test checks the
+  incremental result equals a fresh one, position by position, and stays within
+  0.02 points of the float network.
+- The second layer reads only the active (nonzero after ReLU) first-layer units.
+
+| | ns per position | 64×16 vs classic, 40 ms/move |
+|---|---|---|
+| Classic eval | 309 | |
+| Network, first version | 2,161 | +64 ± 13 (3000 games) |
+| Network, incremental | **704** | **+112 ± 13** (3000 games) |
+
+At 200 ms per move it is +111 ± 36 (400 games). The speed-up also made the
+bigger network usable: 128×32 went from +6 ± 24 to +135 ± 26 at 40 ms per move.
+Head to head it ties the 64×16 (−10 ± 12 over 3000 games), so the smaller,
+lighter one stays the default.
 
 **The target mix.** Training only on the search's own values, or only on game
 outcomes, did worse than half and half (raw features, 128×32, equal nodes):
@@ -96,6 +121,6 @@ results as charts.
 
 ## Next
 
-- Faster inference (integer weights, updating the first layer incrementally
-  as moves are made, as chess engines do) to afford a bigger network.
-- Train again on games played by the network itself.
+- Train again on games played by the network itself ([ml/selfplay-loop.sh](../ml/selfplay-loop.sh)).
+- Update the first layer on each move inside the search (true NNUE), so even
+  the feature extraction is incremental.

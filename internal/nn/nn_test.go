@@ -10,6 +10,7 @@ import (
 	"github.com/tusk80/azul-engine/internal/dataset"
 	"github.com/tusk80/azul-engine/internal/eval"
 	"github.com/tusk80/azul-engine/internal/game"
+	"github.com/tusk80/azul-engine/internal/search"
 )
 
 func sample(rng *rand.Rand) (f [dataset.NumFeatures]int16) {
@@ -108,7 +109,7 @@ func TestEvaluateAndSaveLoad(t *testing.T) {
 		t.Fatalf("values %d and %d are not opposite", a, b)
 	}
 	f := dataset.Features(&s)
-	if got, want := e.Evaluate(&s, int(s.ToMove)), int(n.Predict(&f)*eval.Scale); got != want {
+	if got, want := e.Evaluate(&s, int(s.ToMove)), int(n.Predict(&f)*eval.Scale); abs(got-want) > 2 {
 		t.Fatalf("loaded net gives %d, original %d", got, want)
 	}
 	// A finished game is scored exactly.
@@ -137,5 +138,69 @@ func BenchmarkEvaluate(b *testing.B) {
 				e.Evaluate(&s, 0)
 			}
 		})
+	}
+}
+
+// Search speed with each evaluation, in positions per second: the number
+// that decides strength at equal time.
+func BenchmarkSearch(b *testing.B) {
+	s := game.NewGame(0)
+	s.Refill(rand.New(rand.NewPCG(3, 3)))
+	run := func(b *testing.B, eng *search.Searcher) {
+		nodes := uint64(0)
+		for b.Loop() {
+			eng.Clear()
+			nodes += eng.Search(&s, search.Options{MaxNodes: 200000}).Nodes
+		}
+		b.ReportMetric(float64(b.Elapsed().Nanoseconds())/float64(nodes), "ns/node")
+	}
+	b.Run("handwritten", func(b *testing.B) { run(b, search.New(16)) })
+	b.Run("net", func(b *testing.B) {
+		eng := search.New(16)
+		eng.Eval = Default().Evaluator().Evaluate
+		run(b, eng)
+	})
+}
+
+func abs(x int) int { return max(x, -x) }
+
+// The evaluator's incremental, fixed-point first layer must give exactly
+// what a fresh one gives, and stay within rounding of the float network,
+// along a long run of positions like a search's.
+func TestEvaluatorIncremental(t *testing.T) {
+	n := Default()
+	reused := n.Evaluator()
+	rng := rand.New(rand.NewPCG(4, 4))
+	checked := 0
+	for g := range 30 {
+		s := game.NewGame(g % 2)
+		s.Refill(rng)
+		var ml game.MoveList
+		for !s.GameOver {
+			if s.RoundOver() {
+				if !s.ResolveRound() {
+					s.Refill(rng)
+				}
+				continue
+			}
+			got := reused.Evaluate(&s, 0)
+			if fresh := n.Evaluator().Evaluate(&s, 0); got != fresh {
+				t.Fatalf("game %d: incremental %d, fresh %d", g, got, fresh)
+			}
+			f := dataset.Features(&s)
+			want := int(n.Predict(&f) * eval.Scale)
+			if int(s.ToMove) != 0 {
+				want = -want
+			}
+			if abs(got-want) > 2 {
+				t.Fatalf("game %d: evaluator %d, float network %d", g, got, want)
+			}
+			checked++
+			s.GenMoves(&ml)
+			s.Apply(ml.Moves[rng.IntN(ml.N)])
+		}
+	}
+	if checked < 1000 {
+		t.Fatalf("only %d positions checked", checked)
 	}
 }

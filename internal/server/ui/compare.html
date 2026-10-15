@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Neural vs Classic — Azul Engine</title>
-  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +64 Elo at equal time.">
+  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +112 Elo at equal time.">
   <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Neural network vs classic: which Azul engine is stronger?">
-  <meta property="og:description" content="A small network trained on self-play beats the hand-tuned engine: 59% of 3,000 games at equal thinking time.">
+  <meta property="og:description" content="A small network trained on self-play beats the hand-tuned engine: 66% of the points over 3,000 games at equal thinking time.">
   <meta property="og:url" content="https://azul.yesil.cc/compare.html">
   <meta property="og:image" content="https://azul.yesil.cc/og.png">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -44,10 +44,10 @@
         or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself.
         We had them play each other 3,000 times, with the same thinking time.</p>
       <div class="stats">
-        <div class="stat"><span class="num">+64</span><span class="lbl">Elo at equal thinking time<br><small>± 13, 3,000 games</small></span></div>
-        <div class="stat"><span class="num">59%</span><span class="lbl">of the points won<br><small>1,757 wins, 1,212 losses</small></span></div>
-        <div class="stat"><span class="num">+4.5</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
-        <div class="stat"><span class="num">+110</span><span class="lbl">Elo with 200 ms per move<br><small>± 35, 400 games</small></span></div>
+        <div class="stat"><span class="num">+112</span><span class="lbl">Elo at equal thinking time<br><small>± 13, 3,000 games</small></span></div>
+        <div class="stat"><span class="num">66%</span><span class="lbl">of the points won<br><small>1,955 wins, 1,020 losses</small></span></div>
+        <div class="stat"><span class="num">+6.3</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
+        <div class="stat"><span class="num">3.1×</span><span class="lbl">faster search<br><small>than the network's first version</small></span></div>
       </div>
     </section>
 
@@ -55,20 +55,20 @@
       <h2>3,000 games, same clock</h2>
       <p>Every deal was played twice with the seats swapped, so neither side got the luckier tiles. 40 ms per move.</p>
       <svg class="chart" viewBox="0 0 640 28" role="img" aria-label="share of games">
-<g class="bar neural"><title>Neural network wins: 1,757 of 3,000 games (58.6%)</title><rect x="0.0" y="0" width="372.5" height="28" rx="4"/></g>
-<g class="bar draw"><title>Shared wins: 31 of 3,000 games (1.0%)</title><rect x="374.5" y="0" width="6.6" height="28" rx="0"/></g>
-<g class="bar classic"><title>Classic wins: 1,212 of 3,000 games (40.4%)</title><rect x="383.1" y="0" width="256.9" height="28" rx="4"/></g>
+<g class="bar neural"><title>Neural network wins: 1,955 of 3,000 games (65.2%)</title><rect x="0.0" y="0" width="414.5" height="28" rx="4"/></g>
+<g class="bar draw"><title>Shared wins: 25 of 3,000 games (0.8%)</title><rect x="416.5" y="0" width="5.3" height="28" rx="0"/></g>
+<g class="bar classic"><title>Classic wins: 1,020 of 3,000 games (34.0%)</title><rect x="423.8" y="0" width="216.2" height="28" rx="4"/></g>
 </svg>
       <ul class="legend">
-        <li><span class="sw neural"></span>Neural network won <b>1,757</b></li>
-        <li><span class="sw draw"></span>Shared <b>31</b></li>
-        <li><span class="sw classic"></span>Classic won <b>1,212</b></li>
+        <li><span class="sw neural"></span>Neural network won <b>1,955</b></li>
+        <li><span class="sw draw"></span>Shared <b>25</b></li>
+        <li><span class="sw classic"></span>Classic won <b>1,020</b></li>
       </ul>
     </section>
 
     <section class="cmp-card">
-      <h2>More time, bigger lead</h2>
-      <p>The network judges better but each judgement costs more, so it looks at fewer positions. The longer both sides think, the more the better judgement counts. Elo over the classic engine; lines show the 95% range.</p>
+      <h2>Speed is strength</h2>
+      <p>A network judges better than hand-written rules but costs more per position, so in the same time it looks at fewer of them. Its first version took 2,161 ns per position against the classic engine's 309. Running its first layer the way chess engines do, updating only the inputs a move changes, in exact integer arithmetic, brought that to 704 ns: the same network gained almost 50 Elo. Elo over the classic engine at 40 ms per move; lines show the 95% range.</p>
       <svg class="chart" viewBox="0 0 640 96" role="img" aria-label="bar chart">
 <line class="zero" x1="150.0" x2="150.0" y1="0" y2="74"/>
 <text class="tick" x="150.0" y="90" text-anchor="middle">0</text>
@@ -78,69 +78,58 @@
 <text class="tick" x="430.0" y="90" text-anchor="middle">+100</text>
 <line class="grid" x1="570.0" x2="570.0" y1="0" y2="74"/>
 <text class="tick" x="570.0" y="90" text-anchor="middle">+150</text>
-<text class="rowlabel" x="138" y="21.0" text-anchor="end">40 ms per move</text>
-<g class="bar neural"><title>40 ms per move, 3,000 games: +64 ± 13 Elo</title>
+<text class="rowlabel" x="138" y="21.0" text-anchor="end">First version</text>
+<g class="bar know"><title>First version, 3,000 games: +64 ± 13 Elo</title>
 <rect x="150.0" y="8" width="179.2" height="16" rx="4"/>
 <rect x="150.0" y="8" width="6" height="16"/>
 <line class="err" x1="292.8" x2="365.6" y1="16.0" y2="16.0"/><line class="err" x1="292.8" x2="292.8" y1="11.0" y2="21.0"/><line class="err" x1="365.6" x2="365.6" y1="11.0" y2="21.0"/>
 <text class="val" x="373.6" y="21" text-anchor="start">+64</text></g>
-<text class="rowlabel" x="138" y="55.0" text-anchor="end">200 ms per move</text>
-<g class="bar neural"><title>200 ms per move, 400 games: +110 ± 35 Elo</title>
-<rect x="150.0" y="42" width="308.0" height="16" rx="4"/>
+<text class="rowlabel" x="138" y="55.0" text-anchor="end">3× faster</text>
+<g class="bar neural"><title>3× faster, 3,000 games: +112 ± 13 Elo</title>
+<rect x="150.0" y="42" width="313.6" height="16" rx="4"/>
 <rect x="150.0" y="42" width="6" height="16"/>
-<line class="err" x1="360.0" x2="556.0" y1="50.0" y2="50.0"/><line class="err" x1="360.0" x2="360.0" y1="45.0" y2="55.0"/><line class="err" x1="556.0" x2="556.0" y1="45.0" y2="55.0"/>
-<text class="val" x="564.0" y="55" text-anchor="start">+110</text></g>
+<line class="err" x1="427.2" x2="500.0" y1="50.0" y2="50.0"/><line class="err" x1="427.2" x2="427.2" y1="45.0" y2="55.0"/><line class="err" x1="500.0" x2="500.0" y1="45.0" y2="55.0"/>
+<text class="val" x="508.0" y="55" text-anchor="start">+112</text></g>
 </svg>
     </section>
 
     <section class="cmp-grid">
       <div class="cmp-card">
-        <h2>Smaller is stronger</h2>
-        <p>A bigger network knows more (equal positions) but is too slow to use it (equal time). 64 × 16 is the sweet spot, and the one the board uses.</p>
-        <svg class="chart" viewBox="0 0 640 190" role="img" aria-label="bar chart">
-<line class="zero" x1="150.0" x2="150.0" y1="0" y2="168"/>
-<text class="tick" x="150.0" y="184" text-anchor="middle">0</text>
-<line class="grid" x1="255.0" x2="255.0" y1="0" y2="168"/>
-<text class="tick" x="255.0" y="184" text-anchor="middle">+50</text>
-<line class="grid" x1="360.0" x2="360.0" y1="0" y2="168"/>
-<text class="tick" x="360.0" y="184" text-anchor="middle">+100</text>
-<line class="grid" x1="465.0" x2="465.0" y1="0" y2="168"/>
-<text class="tick" x="465.0" y="184" text-anchor="middle">+150</text>
-<line class="grid" x1="570.0" x2="570.0" y1="0" y2="168"/>
-<text class="tick" x="570.0" y="184" text-anchor="middle">+200</text>
-<text class="rowlabel" x="138" y="31.0" text-anchor="end">32 × 16</text>
-<g class="bar know"><title>32 × 16, equal positions: +96 ± 25 Elo</title>
-<rect x="150.0" y="8" width="201.6" height="16" rx="4"/>
-<rect x="150.0" y="8" width="6" height="16"/>
-<line class="err" x1="299.1" x2="404.1" y1="16.0" y2="16.0"/><line class="err" x1="299.1" x2="299.1" y1="11.0" y2="21.0"/><line class="err" x1="404.1" x2="404.1" y1="11.0" y2="21.0"/>
-<text class="val" x="412.1" y="21" text-anchor="start">+96</text></g>
-<g class="bar neural"><title>32 × 16, equal time: +62 ± 24 Elo</title>
-<rect x="150.0" y="28" width="130.2" height="16" rx="4"/>
-<rect x="150.0" y="28" width="6" height="16"/>
-<line class="err" x1="229.8" x2="330.6" y1="36.0" y2="36.0"/><line class="err" x1="229.8" x2="229.8" y1="31.0" y2="41.0"/><line class="err" x1="330.6" x2="330.6" y1="31.0" y2="41.0"/>
-<text class="val" x="338.6" y="41" text-anchor="start">+62</text></g>
-<text class="rowlabel" x="138" y="85.0" text-anchor="end">64 × 16</text>
+        <h2>Fast enough to use what it knows</h2>
+        <p>Before the speed-up the bigger network was too slow to use its knowledge: +6 at equal time. Now each network plays about as well at equal time as at equal positions. Head to head, 128 × 32 and 64 × 16 tie (−10 ± 12 over 3,000 games), so the board keeps the smaller, lighter one.</p>
+        <svg class="chart" viewBox="0 0 640 136" role="img" aria-label="bar chart">
+<line class="zero" x1="150.0" x2="150.0" y1="0" y2="114"/>
+<text class="tick" x="150.0" y="130" text-anchor="middle">0</text>
+<line class="grid" x1="255.0" x2="255.0" y1="0" y2="114"/>
+<text class="tick" x="255.0" y="130" text-anchor="middle">+50</text>
+<line class="grid" x1="360.0" x2="360.0" y1="0" y2="114"/>
+<text class="tick" x="360.0" y="130" text-anchor="middle">+100</text>
+<line class="grid" x1="465.0" x2="465.0" y1="0" y2="114"/>
+<text class="tick" x="465.0" y="130" text-anchor="middle">+150</text>
+<line class="grid" x1="570.0" x2="570.0" y1="0" y2="114"/>
+<text class="tick" x="570.0" y="130" text-anchor="middle">+200</text>
+<text class="rowlabel" x="138" y="31.0" text-anchor="end">64 × 16</text>
 <g class="bar know"><title>64 × 16, equal positions: +114 ± 25 Elo</title>
-<rect x="150.0" y="62" width="239.4" height="16" rx="4"/>
-<rect x="150.0" y="62" width="6" height="16"/>
-<line class="err" x1="336.9" x2="441.9" y1="70.0" y2="70.0"/><line class="err" x1="336.9" x2="336.9" y1="65.0" y2="75.0"/><line class="err" x1="441.9" x2="441.9" y1="65.0" y2="75.0"/>
-<text class="val" x="449.9" y="75" text-anchor="start">+114</text></g>
-<g class="bar neural"><title>64 × 16, equal time: +64 ± 13 Elo</title>
-<rect x="150.0" y="82" width="134.4" height="16" rx="4"/>
-<rect x="150.0" y="82" width="6" height="16"/>
-<line class="err" x1="257.1" x2="311.7" y1="90.0" y2="90.0"/><line class="err" x1="257.1" x2="257.1" y1="85.0" y2="95.0"/><line class="err" x1="311.7" x2="311.7" y1="85.0" y2="95.0"/>
-<text class="val" x="319.7" y="95" text-anchor="start">+64</text></g>
-<text class="rowlabel" x="138" y="139.0" text-anchor="end">128 × 32</text>
+<rect x="150.0" y="8" width="239.4" height="16" rx="4"/>
+<rect x="150.0" y="8" width="6" height="16"/>
+<line class="err" x1="336.9" x2="441.9" y1="16.0" y2="16.0"/><line class="err" x1="336.9" x2="336.9" y1="11.0" y2="21.0"/><line class="err" x1="441.9" x2="441.9" y1="11.0" y2="21.0"/>
+<text class="val" x="449.9" y="21" text-anchor="start">+114</text></g>
+<g class="bar neural"><title>64 × 16, equal time: +112 ± 13 Elo</title>
+<rect x="150.0" y="28" width="235.2" height="16" rx="4"/>
+<rect x="150.0" y="28" width="6" height="16"/>
+<line class="err" x1="357.9" x2="412.5" y1="36.0" y2="36.0"/><line class="err" x1="357.9" x2="357.9" y1="31.0" y2="41.0"/><line class="err" x1="412.5" x2="412.5" y1="31.0" y2="41.0"/>
+<text class="val" x="420.5" y="41" text-anchor="start">+112</text></g>
+<text class="rowlabel" x="138" y="85.0" text-anchor="end">128 × 32</text>
 <g class="bar know"><title>128 × 32, equal positions: +141 ± 13 Elo</title>
-<rect x="150.0" y="116" width="296.1" height="16" rx="4"/>
-<rect x="150.0" y="116" width="6" height="16"/>
-<line class="err" x1="418.8" x2="473.4" y1="124.0" y2="124.0"/><line class="err" x1="418.8" x2="418.8" y1="119.0" y2="129.0"/><line class="err" x1="473.4" x2="473.4" y1="119.0" y2="129.0"/>
-<text class="val" x="481.4" y="129" text-anchor="start">+141</text></g>
-<g class="bar neural"><title>128 × 32, equal time: +6 ± 24 Elo</title>
-<rect x="150.0" y="136" width="12.6" height="16" rx="4"/>
-<rect x="150.0" y="136" width="6" height="16"/>
-<line class="err" x1="150.0" x2="213.0" y1="144.0" y2="144.0"/><line class="err" x1="150.0" x2="150.0" y1="139.0" y2="149.0"/><line class="err" x1="213.0" x2="213.0" y1="139.0" y2="149.0"/>
-<text class="val" x="221.0" y="149" text-anchor="start">+6</text></g>
+<rect x="150.0" y="62" width="296.1" height="16" rx="4"/>
+<rect x="150.0" y="62" width="6" height="16"/>
+<line class="err" x1="418.8" x2="473.4" y1="70.0" y2="70.0"/><line class="err" x1="418.8" x2="418.8" y1="65.0" y2="75.0"/><line class="err" x1="473.4" x2="473.4" y1="65.0" y2="75.0"/>
+<text class="val" x="481.4" y="75" text-anchor="start">+141</text></g>
+<g class="bar neural"><title>128 × 32, equal time: +135 ± 26 Elo</title>
+<rect x="150.0" y="82" width="283.5" height="16" rx="4"/>
+<rect x="150.0" y="82" width="6" height="16"/>
+<line class="err" x1="378.9" x2="488.1" y1="90.0" y2="90.0"/><line class="err" x1="378.9" x2="378.9" y1="85.0" y2="95.0"/><line class="err" x1="488.1" x2="488.1" y1="85.0" y2="95.0"/>
+<text class="val" x="496.1" y="95" text-anchor="start">+135</text></g>
 </svg>
         <ul class="legend">
           <li><span class="sw know"></span>Equal positions: what it knows</li>
@@ -225,6 +214,7 @@
         <li><b>Play.</b> The classic engine played 30,000 games against itself; every position became a row of 170 numbers with what happened next.</li>
         <li><b>Learn.</b> A network with two small hidden layers learned to predict the final score margin. It was trained twice: from scratch in plain Go (no libraries), and with PyTorch on a GPU.</li>
         <li><b>Plug in.</b> The network replaces the hand-written judgement inside the same search, so the only difference between the two engines is the brain.</li>
+        <li><b>Speed up.</b> Consecutive positions in a search differ by a move or two, so the network's first layer is updated rather than recomputed, in integers so it never drifts. Three times faster, exactly the same answers.</li>
         <li><b>Prove it.</b> Thousands of games at equal positions and at equal time, every deal played from both seats.</li>
       </ol>
       <table class="cmp-table">
@@ -234,7 +224,7 @@
           <tr><td>Training time, 64 × 16</td><td>19 s</td><td>24 s</td></tr>
           <tr><td>Training time, 128 × 32</td><td>42 s</td><td>22 s</td></tr>
           <tr><td>Validation error (points²)</td><td>153.0</td><td>153.2</td></tr>
-          <tr><td>Elo at equal time, 64 × 16</td><td>+66 ± 24</td><td>+64 ± 24</td></tr>
+          <tr><td>Elo at equal time, 64 × 16 (first version)</td><td>+66 ± 24</td><td>+64 ± 24</td></tr>
         </tbody>
       </table>
       <p class="note">The two agree to the decimal, which checks the hand-written training. A network this small is too little work per step for the GPU to pay off; it only pulls ahead on the bigger one.</p>
@@ -254,11 +244,14 @@
       <table class="cmp-table">
         <thead><tr><th>Experiment</th><th>Games</th><th>Elo vs classic</th></tr></thead>
         <tbody>
-          <tr><td>64 × 16, 40 ms per move</td><td>3,000</td><td>+64 ± 13</td></tr>
-          <tr><td>64 × 16, 200 ms per move</td><td>400</td><td>+110 ± 35</td></tr>
-          <tr><td>32 × 16, equal positions / equal time</td><td>800 / 800</td><td>+96 ± 25 / +62 ± 24</td></tr>
-          <tr><td>64 × 16, equal positions / equal time</td><td>800 / 800</td><td>+114 ± 25 / +66 ± 24</td></tr>
-          <tr><td>128 × 32, equal positions / equal time</td><td>3,000 / 800</td><td>+141 ± 13 / +6 ± 24</td></tr>
+          <tr><td>64 × 16, 40 ms per move (the board's brain)</td><td>3,000</td><td>+112 ± 13</td></tr>
+          <tr><td>64 × 16, 200 ms per move</td><td>400</td><td>+111 ± 36</td></tr>
+          <tr><td>128 × 32, 40 ms per move</td><td>800</td><td>+135 ± 26</td></tr>
+          <tr><td>128 × 32 against 64 × 16, 40 ms per move</td><td>3,000</td><td>−10 ± 12</td></tr>
+          <tr><td>First version, 64 × 16, 40 ms / 200 ms per move</td><td>3,000 / 400</td><td>+64 ± 13 / +110 ± 35</td></tr>
+          <tr><td>First version, 32 × 16, equal positions / equal time</td><td>800 / 800</td><td>+96 ± 25 / +62 ± 24</td></tr>
+          <tr><td>First version, 64 × 16, equal positions / equal time</td><td>800 / 800</td><td>+114 ± 25 / +66 ± 24</td></tr>
+          <tr><td>First version, 128 × 32, equal positions / equal time</td><td>3,000 / 800</td><td>+141 ± 13 / +6 ± 24</td></tr>
           <tr><td>Board only, 128 × 32, equal positions</td><td>400</td><td>−7 ± 34</td></tr>
           <tr><td>Target: search value only</td><td>400</td><td>−127 ± 36</td></tr>
           <tr><td>Target: outcome only</td><td>400</td><td>−84 ± 35</td></tr>

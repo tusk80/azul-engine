@@ -15,8 +15,8 @@ it learned from**.
 
 | Neural network vs hand-tuned evaluation | Result |
 |---|---|
-| Equal thinking time, 40 ms per move | **+64 ± 13 Elo** (59% of points, 3,000 games) |
-| Equal thinking time, 200 ms per move | **+110 ± 35 Elo** (400 games) |
+| Equal thinking time, 40 ms per move | **+112 ± 13 Elo** (66% of points, 3,000 games) |
+| Equal thinking time, 200 ms per move | **+111 ± 36 Elo** (400 games) |
 | Equal positions searched | **+141 ± 13 Elo** (3,000 games, 128 × 32 network) |
 
 ![The analysis board with the neural network's top three moves](docs/screenshot.png)
@@ -60,8 +60,9 @@ it learned from**.
    margin, with a target mixing the search's value and the real outcome half and
    half. Adam, minibatches, a held-out validation set.
 3. **Inference.** The network replaces the hand-written evaluation inside the same
-   search. Its first layer visits only nonzero inputs, since most features are
-   empty wall cells.
+   search. Like a chess NNUE, its first layer is kept between positions and only
+   the inputs a move changed are applied, in exact integer arithmetic: three
+   times faster than recomputing, worth about 50 Elo.
 4. **Evaluation.** Matches with every deal played twice, seats swapped, at equal
    positions searched (what it knows) and at equal time (how it plays).
 
@@ -71,12 +72,13 @@ What made the difference, measured:
 |---|---|
 | Raw board only, 128 × 32 | −7 ± 34 (a tie) |
 | + the board as if scored now, 128 × 32 | **+141 ± 13** at equal positions |
-| 128 × 32 at equal time | +6 ± 24: knows more, too slow |
-| **64 × 16 at equal time** | **+64 ± 13**: the one that ships |
+| 128 × 32 at equal time, first version | +6 ± 24: knows more, too slow |
+| 64 × 16 at equal time, first version | +64 ± 13 |
+| **64 × 16 at equal time, 3× faster inference** | **+112 ± 13**: the one that ships |
 | Target: search value only / outcome only | −127 / −84 (raw board) |
 
 Go and PyTorch, trained on the same data, reach the same validation error
-(153.0 vs 153.2) and the same strength (+66 vs +64), which also checks the
+(153.0 vs 153.2) and the same strength (+66 vs +64 in their first version), which also checks the
 hand-written backpropagation. Details: [docs/ML.md](docs/ML.md).
 
 ## Quick start
