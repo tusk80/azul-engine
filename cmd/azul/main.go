@@ -366,9 +366,13 @@ func loadWeights(name string) (eval.Weights, error) {
 	return w, nil
 }
 
+// loadNet reads a network file; "default" is the one built in, "" is none.
 func loadNet(path string) (*nn.Net, error) {
-	if path == "" {
+	switch path {
+	case "":
 		return nil, nil
+	case "default":
+		return nn.Default(), nil
 	}
 	return nn.Load(path)
 }
@@ -376,7 +380,7 @@ func loadNet(path string) (*nn.Net, error) {
 // cmdTrain fits a network to gendata output and saves it.
 func cmdTrain(args []string) error {
 	fs := flag.NewFlagSet("train", flag.ContinueOnError)
-	data := fs.String("data", "data.csv", "training data from azul gendata")
+	data := fs.String("data", "data.csv", "training data from azul gendata; several files separated by commas (the last one's tail is held out)")
 	out := fs.String("out", "net.json", "where to save the network")
 	h1 := fs.Int("h1", 128, "units in the first hidden layer")
 	h2 := fs.Int("h2", 32, "units in the second hidden layer")
@@ -390,16 +394,20 @@ func cmdTrain(args []string) error {
 		return err
 	}
 	start := time.Now()
-	d, err := nn.LoadCSV(*data)
-	if err != nil {
-		return err
+	d := &nn.Data{}
+	for _, path := range strings.Split(*data, ",") {
+		part, err := nn.LoadCSV(path)
+		if err != nil {
+			return err
+		}
+		d.Append(part)
 	}
 	train, val := d.Split(1 - *valFrac)
 	fmt.Printf("%d training and %d validation positions, loaded in %s\n", train.Len(), val.Len(), time.Since(start).Round(time.Millisecond))
 	net := nn.New(*h1, *h2, *seed)
 	net.FitScale(train)
 	r := net.Report(val)
-	fmt.Printf("hand-written eval vs final margin: MSE %.2f, picks the winner %.1f%%\n", r.EvalMSE, 100*r.EvalSign)
+	fmt.Printf("the data's search values vs final margin: MSE %.2f, pick the winner %.1f%%\n", r.EvalMSE, 100*r.EvalSign)
 	fmt.Println("epoch  train loss  val MSE  winner%  time")
 	start = time.Now()
 	nn.Train(net, train, val, nn.Config{
@@ -529,7 +537,12 @@ func cmdGendata(args []string) error {
 	explore := fs.Float64("explore", 0.05, "chance of a random move, for variety")
 	workers := fs.Int("workers", runtime.NumCPU(), "parallel games")
 	out := fs.String("out", "data.csv", "output file")
+	netPath := fs.String("net", "", `network that plays the games ("default" = built in; empty = classic eval)`)
 	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	net, err := loadNet(*netPath)
+	if err != nil {
 		return err
 	}
 	f, err := os.Create(*out)
@@ -546,6 +559,9 @@ func cmdGendata(args []string) error {
 	for range *workers {
 		go func() {
 			eng := search.New(16)
+			if net != nil {
+				eng.Eval = net.Evaluator().Evaluate
+			}
 			for s := range next {
 				eng.Clear()
 				done <- dataset.Game(eng, s, *nodes, *explore)

@@ -24,6 +24,14 @@ type Data struct {
 
 func (d *Data) Len() int { return len(d.X) }
 
+// Append adds o's rows after d's.
+func (d *Data) Append(o *Data) {
+	d.X = append(d.X, o.X...)
+	d.Eval = append(d.Eval, o.Eval...)
+	d.Margin = append(d.Margin, o.Margin...)
+	d.Result = append(d.Result, o.Result...)
+}
+
 // Split returns the first and the last part of d, cut at frac of the rows.
 // Rows of one game are written together, so almost every game lands on one
 // side only.
