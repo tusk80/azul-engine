@@ -166,6 +166,7 @@ func cmdAnalyze(args []string) error {
 	multiPV := fs.Int("multipv", 3, "number of best moves to show")
 	ttMB := fs.Int("hash", 256, "transposition table size in MB")
 	weights := fs.String("weights", "default", `eval weights: "default", "zero" or a JSON file`)
+	threads := fs.Int("threads", 1, "search threads (Lazy SMP)")
 	look := lookFlags(fs, "")
 	var path string
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
@@ -198,6 +199,7 @@ func cmdAnalyze(args []string) error {
 		MoveTime: *moveTime,
 		MaxDepth: *depth,
 		MultiPV:  *multiPV,
+		Threads:  *threads,
 		OnDepth: func(r search.Result) {
 			l := r.Lines[0]
 			fmt.Printf("depth %2d  %-12s nodes %-10d %6.2fM n/s  %-8v pv %s\n",
@@ -226,10 +228,11 @@ func cmdServe(args []string) error {
 	maxTime := fs.Duration("max-time", 30*time.Second, "longest search a request may ask for")
 	ttMB := fs.Int("hash", 256, "transposition table size in MB, per engine")
 	engines := fs.Int("engines", 1, "searches that may run at once")
+	threads := fs.Int("threads", min(runtime.NumCPU(), 8), "threads per search (Lazy SMP)")
 	rate := fs.Int("rate", 0, "searches per minute per client address (0 = unlimited)")
 	ipHeader := fs.String("ip-header", "", `header your reverse proxy sets to the visitor's address, e.g. "CF-Connecting-IP" or "X-Forwarded-For"`)
 	cors := fs.String("cors", "*", `sites allowed to call the API, comma-separated; "*" = any, "" = none`)
-	public := fs.Bool("public", false, "preset for a public site: -max-time 2s -hash 32 -rate 40 -cors \"\" and half the CPUs as engines")
+	public := fs.Bool("public", false, "preset for a public site: -max-time 2s -hash 32 -rate 40 -cors \"\", half the CPUs as engines, one thread each")
 	weights := fs.String("weights", "default", `eval weights: "default", "zero" or a JSON file`)
 	look := lookFlags(fs, "")
 	open := fs.Bool("open", false, "open the analysis board in the browser")
@@ -251,6 +254,7 @@ func cmdServe(args []string) error {
 		preset("rate", func() { *rate = 40 })
 		preset("cors", func() { *cors = "" })
 		preset("engines", func() { *engines = max(runtime.NumCPU()/2, 1) })
+		preset("threads", func() { *threads = 1 })
 		preset("log", func() { *logReqs = true })
 	}
 	var logger *slog.Logger
@@ -286,6 +290,7 @@ func cmdServe(args []string) error {
 			HashMB:            *ttMB,
 			MoveTime:          *moveTime,
 			MaxMoveTime:       *maxTime,
+			Threads:           *threads,
 			SearchesPerMinute: *rate,
 			ClientIPHeader:    *ipHeader,
 			CORSOrigins:       origins,
@@ -438,6 +443,8 @@ func cmdSelfplay(args []string) error {
 	bLook := lookFlags(fs, "b-")
 	aNet := fs.String("a-net", "", "trained network for player A, replacing its weights")
 	bNet := fs.String("b-net", "", "trained network for player B, replacing its weights")
+	aThreads := fs.Int("a-threads", 1, "search threads for player A")
+	bThreads := fs.Int("b-threads", 1, "search threads for player B")
 	pairs := fs.Int("pairs", 200, "game pairs (each deal played with seats swapped)")
 	nodes := fs.Uint64("nodes", 20000, "node budget per move")
 	depth := fs.Int("depth", 0, "depth limit per move (0 = none)")
@@ -457,6 +464,7 @@ func cmdSelfplay(args []string) error {
 	}
 	a := selfplay.Player{Weights: wa, Lookahead: aLook(), Nodes: *nodes, Depth: *depth, Time: *moveTime}
 	b := selfplay.Player{Weights: wb, Lookahead: bLook(), Nodes: *nodes, Depth: *depth, Time: *moveTime}
+	a.Threads, b.Threads = *aThreads, *bThreads
 	if a.Net, err = loadNet(*aNet); err != nil {
 		return err
 	}

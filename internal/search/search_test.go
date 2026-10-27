@@ -146,6 +146,27 @@ func TestSearchMatchesReference(t *testing.T) {
 	}
 }
 
+// Helper threads share the table: the main thread must still solve rounds
+// exactly, whatever the helpers stored.
+func TestThreadsMatchReference(t *testing.T) {
+	e := New(16)
+	for i, s := range latePositions(40, 5, 8) {
+		want := reference(&s, -inf, inf)
+		res := e.Search(&s, Options{Threads: 4})
+		if !res.Exact || res.Lines[0].Score != want {
+			t.Fatalf("pos %d: 4 threads give %d (exact %v), reference %d", i, res.Lines[0].Score, res.Exact, want)
+		}
+	}
+	// And stop on time at the start of a round, where nothing is solved.
+	s := game.NewGame(0)
+	s.Refill(rand.New(rand.NewPCG(5, 5)))
+	start := time.Now()
+	res := e.Search(&s, Options{Threads: 4, MoveTime: 100 * time.Millisecond})
+	if el := time.Since(start); el > 500*time.Millisecond || len(res.Lines) == 0 {
+		t.Fatalf("4 threads took %v for a 100ms search, %d lines", el, len(res.Lines))
+	}
+}
+
 func TestLookaheadMatchesReference(t *testing.T) {
 	look := Lookahead{Samples: 3, Depth: 1}
 	e := New(16)

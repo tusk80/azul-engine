@@ -22,10 +22,11 @@ type Player struct {
 	Nodes     uint64        // per-move node budget (deterministic)
 	Depth     int           // per-move depth limit
 	Time      time.Duration // per-move time limit (not deterministic)
+	Threads   int           // search threads per move (not deterministic above 1)
 }
 
 func (p *Player) options() search.Options {
-	return search.Options{MaxNodes: p.Nodes, MaxDepth: p.Depth, MoveTime: p.Time}
+	return search.Options{MaxNodes: p.Nodes, MaxDepth: p.Depth, MoveTime: p.Time, Threads: p.Threads}
 }
 
 // maxRounds guards against engines that never finish a wall row.
@@ -38,9 +39,10 @@ func Game(eng [2]*search.Searcher, pl [2]*Player, seed uint64) game.State {
 	rng := rand.New(rand.NewPCG(seed, 0x5eed))
 	for i := range eng {
 		eng[i].Weights = pl[i].Weights
-		eng[i].Eval = nil
-		if pl[i].Net != nil {
-			eng[i].Eval = pl[i].Net.Evaluator().Evaluate
+		eng[i].Eval, eng[i].NewEval = nil, nil
+		if net := pl[i].Net; net != nil {
+			eng[i].NewEval = func() func(*game.State, int) int { return net.Evaluator().Evaluate }
+			eng[i].Eval = eng[i].NewEval()
 		}
 		eng[i].Lookahead = pl[i].Lookahead
 		eng[i].Clear()

@@ -28,6 +28,7 @@ type Config struct {
 	HashMB      int           // transposition table per engine; default 64
 	MoveTime    time.Duration // search time when a request does not ask; default 1s
 	MaxMoveTime time.Duration // most a request may ask for; default 30s
+	Threads     int           // threads per search; default 1
 	QueueWait   time.Duration // how long a request waits for a free engine; default 5s
 
 	// SearchesPerMinute limits /bestmove per client address; other
@@ -199,6 +200,7 @@ func (s *Server) handleBestMove(w http.ResponseWriter, r *http.Request) {
 	}
 	opt := req.Options(s.cfg.MoveTime, s.cfg.MaxMoveTime)
 	opt.Ctx = r.Context()
+	opt.Threads = s.cfg.Threads
 
 	if !s.searches.allow(clientIP(r, s.cfg.ClientIPHeader), time.Now()) {
 		tooMany(w)

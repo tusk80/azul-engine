@@ -9,6 +9,7 @@ import (
 	"cmp"
 	"context"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/tusk80/azul-engine/internal/eval"
@@ -30,6 +31,10 @@ type Options struct {
 	MaxNodes uint64        // 0 = no node limit; checked every 1024 nodes
 	MultiPV  int           // number of root moves with exact scores; default 1
 	OnDepth  func(Result)  // called after each completed iteration
+	// Threads searches with this many threads (Lazy SMP): helpers search
+	// the same position and share the transposition table, and the main
+	// thread's result is returned. 0 or 1 = one thread.
+	Threads int
 }
 
 // Line is one scored root move and its principal variation.
@@ -73,6 +78,10 @@ type Searcher struct {
 	Eval func(s *game.State, p int) int
 	// EvalName labels Eval for callers that switch between evaluations.
 	EvalName string
+	// NewEval makes another evaluation like Eval for a helper thread, for
+	// evaluations that keep state between calls. Without it, a search with
+	// an Eval runs on one thread.
+	NewEval func() func(s *game.State, p int) int
 	// Lookahead values round-end positions by sampling next-round deals.
 	// It runs as a second pass once the round is solved without it, and only
 	// replaces the plain result if it completes within the budget. Zero
@@ -84,6 +93,10 @@ type Searcher struct {
 	salt   uint64     // XORed into TT keys during that pass: its values differ
 
 	tt      *TT
+	helpers []*Searcher // Lazy SMP threads sharing tt, made on first use
+	helper  bool        // this is one of them: it never ends a search itself
+	thread  int         // a helper's index from 1, choosing the depths it skips
+
 	states  [maxPly + 1]game.State
 	moves   [maxPly]game.MoveList
 	scores  [maxPly][game.MaxMoves]int32
@@ -121,6 +134,9 @@ func (e *Searcher) evaluate(s *game.State) int {
 func (e *Searcher) Clear() {
 	e.tt.Clear()
 	e.history = [game.NumPlayers][512]int32{}
+	for _, h := range e.helpers {
+		h.history = [game.NumPlayers][512]int32{}
+	}
 	if e.look != nil {
 		e.look.clear()
 	}
@@ -128,8 +144,64 @@ func (e *Searcher) Clear() {
 
 // Search returns the best moves for the side to move in s.
 func (e *Searcher) Search(s *game.State, opt Options) Result {
+	// One generation per search, set before any helper starts.
+	e.tt.newSearch()
+	threads := opt.Threads
+	if e.Eval != nil && e.NewEval == nil {
+		threads = 1
+	}
+	if threads <= 1 {
+		return e.search(s, opt)
+	}
+	for len(e.helpers) < threads-1 {
+		e.helpers = append(e.helpers, &Searcher{tt: e.tt, helper: true, thread: len(e.helpers) + 1})
+	}
+	parent := opt.Ctx
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithCancel(parent)
+	var wg sync.WaitGroup
+	for _, h := range e.helpers[:threads-1] {
+		h.Weights, h.Eval = e.Weights, nil
+		if e.NewEval != nil {
+			h.Eval = e.NewEval()
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			h.search(s, Options{Ctx: ctx, MaxDepth: opt.MaxDepth, MultiPV: 1})
+		}()
+	}
+	res := e.search(s, opt)
+	cancel()
+	wg.Wait()
+	for _, h := range e.helpers[:threads-1] {
+		res.Nodes += h.nodes
+	}
+	return res
+}
+
+// Helpers skip some depths, each on its own schedule (Stockfish's), so at
+// any moment the threads search different depths and the deeper ones fill
+// the shared table ahead of the main thread.
+var (
+	skipSize  = [...]int{1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4}
+	skipPhase = [...]int{0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7}
+)
+
+func (e *Searcher) skips(depth int) bool {
+	if e.thread == 0 {
+		return false
+	}
+	i := (e.thread - 1) % len(skipSize)
+	return (depth+skipPhase[i])/skipSize[i]%2 != 0
+}
+
+func (e *Searcher) search(s *game.State, opt Options) Result {
 	start := time.Now()
-	e.nodes, e.stop, e.canStop = 0, false, false
+	// A helper may stop at any moment: the main thread has its move.
+	e.nodes, e.stop, e.canStop = 0, false, e.helper
 	e.deadline = time.Time{}
 	if opt.MoveTime > 0 {
 		e.deadline = start.Add(opt.MoveTime)
@@ -139,7 +211,6 @@ func (e *Searcher) Search(s *game.State, opt Options) Result {
 	if opt.Ctx != nil {
 		e.done = opt.Ctx.Done()
 	}
-	e.tt.newSearch()
 	for p := range e.history {
 		for i := range e.history[p] {
 			e.history[p][i] /= 4
@@ -172,6 +243,9 @@ func (e *Searcher) Search(s *game.State, opt Options) Result {
 		return res
 	}
 	for depth := 1; depth <= maxDepth; depth++ {
+		if e.skips(depth) {
+			continue
+		}
 		e.leafCuts = 0
 		e.searchRoot(depth, multiPV)
 		if e.stop {

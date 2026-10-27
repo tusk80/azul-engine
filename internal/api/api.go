@@ -79,9 +79,10 @@ func UseEngine(eng *search.Searcher, name string) error {
 	}
 	switch name {
 	case EngineClassic:
-		eng.Eval = nil
+		eng.Eval, eng.NewEval = nil, nil
 	case EngineNeural:
-		eng.Eval = nn.Default().Evaluator().Evaluate
+		eng.NewEval = func() func(*game.State, int) int { return nn.Default().Evaluator().Evaluate }
+		eng.Eval = eng.NewEval()
 	default:
 		return badRequest("engine: unknown %q (want %q or %q)", name, EngineClassic, EngineNeural)
 	}

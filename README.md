@@ -41,7 +41,9 @@ it learned from**. Then it played itself and got stronger again.
   hashing, and a move generator checked by perft counts.
 - **Search.** Negamax with principal-variation search, iterative deepening, a
   transposition table and move ordering. Later in a round it solves the rest of
-  the round exactly.
+  the round exactly. On several cores it runs Lazy SMP: helper threads share a
+  lock-free table, each skipping depths on its own schedule (4 threads: +37 ± 12
+  Elo at 40 ms per move, three times faster to depth 8).
 - **Two evaluations, one search.**
   - *Classic*: fifteen hand-written terms, tuned by SPSA self-play.
   - *Neural*: a 170 → 64 → 16 → 1 network that predicts the final score margin.

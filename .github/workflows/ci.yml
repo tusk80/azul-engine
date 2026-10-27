@@ -22,6 +22,8 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test ./...
+      - name: Race detector (threads share the search table)
+        run: go test -race -run 'Threads|Incremental' ./internal/search ./internal/nn
       - name: Build
         run: CGO_ENABLED=0 go build -trimpath -o azul ./cmd/azul
       - name: Build site (WebAssembly)

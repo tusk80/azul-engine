@@ -12,6 +12,7 @@ import (
 type Limits struct {
 	MoveTime    time.Duration // when the request names none
 	MaxMoveTime time.Duration
+	Threads     int // per search; 0 or 1 = one
 }
 
 // Dispatch answers one request by path, the way the HTTP server would:
@@ -62,7 +63,9 @@ func dispatch(eng *search.Searcher, lim Limits, path string, body []byte) (any, 
 		if err != nil {
 			return nil, err
 		}
-		return req.Answer(eng, &st, req.Options(lim.MoveTime, lim.MaxMoveTime))
+		opt := req.Options(lim.MoveTime, lim.MaxMoveTime)
+		opt.Threads = lim.Threads
+		return req.Answer(eng, &st, opt)
 	case "/apply":
 		var req ApplyRequest
 		if err := decode(&req); err != nil {
