@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Neural vs Classic — Azul Engine</title>
-  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +112 Elo at equal time.">
+  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +148 Elo at equal time.">
   <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Neural network vs classic: which Azul engine is stronger?">
-  <meta property="og:description" content="A small network trained on self-play beats the hand-tuned engine: 66% of the points over 3,000 games at equal thinking time.">
+  <meta property="og:description" content="A small network trained on self-play beats the hand-tuned engine: 70% of the points over 3,000 games at equal thinking time.">
   <meta property="og:url" content="https://azul.yesil.cc/compare.html">
   <meta property="og:image" content="https://azul.yesil.cc/og.png">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -42,12 +42,12 @@
       <p class="eyebrow">Machine learning benchmark · two brains, one search</p>
       <h1>The neural network wins.</h1>
       <p class="lede">The engine can judge positions two ways: with <strong>classic</strong> rules written and tuned by hand,
-        or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself.
-        We had them play each other 3,000 times, with the same thinking time.</p>
+        or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself,
+        then from its own games. We had them play each other 3,000 times, with the same thinking time.</p>
       <div class="stats">
-        <div class="stat"><span class="num">+112</span><span class="lbl">Elo at equal thinking time<br><small>± 13, 3,000 games</small></span></div>
-        <div class="stat"><span class="num">66%</span><span class="lbl">of the points won<br><small>1,955 wins, 1,020 losses</small></span></div>
-        <div class="stat"><span class="num">+6.3</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
+        <div class="stat"><span class="num">+148</span><span class="lbl">Elo at equal thinking time<br><small>± 14, 3,000 games</small></span></div>
+        <div class="stat"><span class="num">70%</span><span class="lbl">of the points won<br><small>2,088 wins, 879 losses</small></span></div>
+        <div class="stat"><span class="num">+8.8</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
         <div class="stat"><span class="num">3.1×</span><span class="lbl">faster search<br><small>than the network's first version</small></span></div>
       </div>
     </section>
@@ -56,14 +56,14 @@
       <h2>3,000 games, same clock</h2>
       <p>Every deal was played twice with the seats swapped, so neither side got the luckier tiles. 40 ms per move.</p>
       <svg class="chart" viewBox="0 0 640 28" role="img" aria-label="share of games">
-<g class="bar neural"><title>Neural network wins: 1,955 of 3,000 games (65.2%)</title><rect x="0.0" y="0" width="414.5" height="28" rx="4"/></g>
-<g class="bar draw"><title>Shared wins: 25 of 3,000 games (0.8%)</title><rect x="416.5" y="0" width="5.3" height="28" rx="0"/></g>
-<g class="bar classic"><title>Classic wins: 1,020 of 3,000 games (34.0%)</title><rect x="423.8" y="0" width="216.2" height="28" rx="4"/></g>
+<g class="bar neural"><title>Neural network wins: 2,088 of 3,000 games (69.6%)</title><rect x="0.0" y="0" width="442.7" height="28" rx="4"/></g>
+<g class="bar draw"><title>Shared wins: 33 of 3,000 games (1.1%)</title><rect x="444.7" y="0" width="7.0" height="28" rx="0"/></g>
+<g class="bar classic"><title>Classic wins: 879 of 3,000 games (29.3%)</title><rect x="453.7" y="0" width="186.3" height="28" rx="4"/></g>
 </svg>
       <ul class="legend">
-        <li><span class="sw neural"></span>Neural network won <b>1,955</b></li>
-        <li><span class="sw draw"></span>Shared <b>25</b></li>
-        <li><span class="sw classic"></span>Classic won <b>1,020</b></li>
+        <li><span class="sw neural"></span>Neural network won <b>2,088</b></li>
+        <li><span class="sw draw"></span>Shared <b>33</b></li>
+        <li><span class="sw classic"></span>Classic won <b>879</b></li>
       </ul>
     </section>
 
@@ -92,6 +92,57 @@
 <line class="err" x1="427.2" x2="500.0" y1="50.0" y2="50.0"/><line class="err" x1="427.2" x2="427.2" y1="45.0" y2="55.0"/><line class="err" x1="500.0" x2="500.0" y1="45.0" y2="55.0"/>
 <text class="val" x="508.0" y="55" text-anchor="start">+112</text></g>
 </svg>
+    </section>
+
+    <section class="cmp-card">
+      <h2>It taught itself</h2>
+      <p>The first network learned from games the classic engine played. Then the network played 10,000 games against itself, a new network learned from them, and it had to beat its parent to take over. One generation of self-play was worth +82 ± 13 Elo over its parent. After that it levelled off: the next three generations could not beat it, so the board uses generation 1. Elo over the classic engine at 40 ms per move.</p>
+      <svg class="chart" viewBox="0 0 640 198" role="img" aria-label="bar chart">
+<line class="zero" x1="150.0" x2="150.0" y1="0" y2="176"/>
+<text class="tick" x="150.0" y="192" text-anchor="middle">0</text>
+<line class="grid" x1="255.0" x2="255.0" y1="0" y2="176"/>
+<text class="tick" x="255.0" y="192" text-anchor="middle">+50</text>
+<line class="grid" x1="360.0" x2="360.0" y1="0" y2="176"/>
+<text class="tick" x="360.0" y="192" text-anchor="middle">+100</text>
+<line class="grid" x1="465.0" x2="465.0" y1="0" y2="176"/>
+<text class="tick" x="465.0" y="192" text-anchor="middle">+150</text>
+<line class="grid" x1="570.0" x2="570.0" y1="0" y2="176"/>
+<text class="tick" x="570.0" y="192" text-anchor="middle">+200</text>
+<text class="rowlabel" x="138" y="21.0" text-anchor="end">Generation 0</text>
+<g class="bar know"><title>Generation 0, trained on the classic engine's games, 3,000 games: +112 ± 13 Elo</title>
+<rect x="150.0" y="8" width="235.2" height="16" rx="4"/>
+<rect x="150.0" y="8" width="6" height="16"/>
+<line class="err" x1="357.9" x2="412.5" y1="16.0" y2="16.0"/><line class="err" x1="357.9" x2="357.9" y1="11.0" y2="21.0"/><line class="err" x1="412.5" x2="412.5" y1="11.0" y2="21.0"/>
+<text class="val" x="420.5" y="21" text-anchor="start">+112</text></g>
+<text class="rowlabel" x="138" y="55.0" text-anchor="end">Generation 1</text>
+<g class="bar neural"><title>Generation 1, trained on its own games, 3,000 games: +148 ± 14 Elo</title>
+<rect x="150.0" y="42" width="310.8" height="16" rx="4"/>
+<rect x="150.0" y="42" width="6" height="16"/>
+<line class="err" x1="431.4" x2="490.2" y1="50.0" y2="50.0"/><line class="err" x1="431.4" x2="431.4" y1="45.0" y2="55.0"/><line class="err" x1="490.2" x2="490.2" y1="45.0" y2="55.0"/>
+<text class="val" x="498.2" y="55" text-anchor="start">+148</text></g>
+<text class="rowlabel" x="138" y="89.0" text-anchor="end">Generation 2</text>
+<g class="bar know"><title>Generation 2, 800 games, did not beat its parent: +107 ± 25 Elo</title>
+<rect x="150.0" y="76" width="224.7" height="16" rx="4"/>
+<rect x="150.0" y="76" width="6" height="16"/>
+<line class="err" x1="322.2" x2="427.2" y1="84.0" y2="84.0"/><line class="err" x1="322.2" x2="322.2" y1="79.0" y2="89.0"/><line class="err" x1="427.2" x2="427.2" y1="79.0" y2="89.0"/>
+<text class="val" x="435.2" y="89" text-anchor="start">+107</text></g>
+<text class="rowlabel" x="138" y="123.0" text-anchor="end">Generation 3</text>
+<g class="bar know"><title>Generation 3, 800 games, did not beat its parent: +99 ± 25 Elo</title>
+<rect x="150.0" y="110" width="207.9" height="16" rx="4"/>
+<rect x="150.0" y="110" width="6" height="16"/>
+<line class="err" x1="305.4" x2="410.4" y1="118.0" y2="118.0"/><line class="err" x1="305.4" x2="305.4" y1="113.0" y2="123.0"/><line class="err" x1="410.4" x2="410.4" y1="113.0" y2="123.0"/>
+<text class="val" x="418.4" y="123" text-anchor="start">+99</text></g>
+<text class="rowlabel" x="138" y="157.0" text-anchor="end">Generation 4</text>
+<g class="bar know"><title>Generation 4, 800 games, tied its parent over 3,000: +120 ± 25 Elo</title>
+<rect x="150.0" y="144" width="252.0" height="16" rx="4"/>
+<rect x="150.0" y="144" width="6" height="16"/>
+<line class="err" x1="349.5" x2="454.5" y1="152.0" y2="152.0"/><line class="err" x1="349.5" x2="349.5" y1="147.0" y2="157.0"/><line class="err" x1="454.5" x2="454.5" y1="147.0" y2="157.0"/>
+<text class="val" x="462.5" y="157" text-anchor="start">+120</text></g>
+</svg>
+      <ul class="legend">
+        <li><span class="sw neural"></span>The board's brain</li>
+        <li><span class="sw know"></span>Other generations</li>
+      </ul>
     </section>
 
     <section class="cmp-grid">
@@ -215,6 +266,7 @@
         <li><b>Play.</b> The classic engine played 30,000 games against itself; every position became a row of 170 numbers with what happened next.</li>
         <li><b>Learn.</b> A network with two small hidden layers learned to predict the final score margin. It was trained twice: from scratch in plain Go (no libraries), and with PyTorch on a GPU.</li>
         <li><b>Plug in.</b> The network replaces the hand-written judgement inside the same search, so the only difference between the two engines is the brain.</li>
+        <li><b>Teach itself.</b> The network played itself; a new network learned from those games and took over only after beating its parent.</li>
         <li><b>Speed up.</b> Consecutive positions in a search differ by a move or two, so the network's first layer is updated rather than recomputed, in integers so it never drifts. Three times faster, exactly the same answers.</li>
         <li><b>Prove it.</b> Thousands of games at equal positions and at equal time, every deal played from both seats.</li>
       </ol>
@@ -245,8 +297,10 @@
       <table class="cmp-table">
         <thead><tr><th>Experiment</th><th>Games</th><th>Elo vs classic</th></tr></thead>
         <tbody>
-          <tr><td>64 × 16, 40 ms per move (the board's brain)</td><td>3,000</td><td>+112 ± 13</td></tr>
-          <tr><td>64 × 16, 200 ms per move</td><td>400</td><td>+111 ± 36</td></tr>
+          <tr><td>Generation 1 (the board's brain), 40 ms per move</td><td>3,000</td><td>+148 ± 14</td></tr>
+          <tr><td>Generation 1 against generation 0, 40 ms per move</td><td>3,000</td><td>+82 ± 13</td></tr>
+          <tr><td>Generation 4 against generation 1, 40 ms per move</td><td>3,000</td><td>−9 ± 12</td></tr>
+          <tr><td>Generation 0, 40 ms / 200 ms per move</td><td>3,000 / 400</td><td>+112 ± 13 / +111 ± 36</td></tr>
           <tr><td>128 × 32, 40 ms per move</td><td>800</td><td>+135 ± 26</td></tr>
           <tr><td>128 × 32 against 64 × 16, 40 ms per move</td><td>3,000</td><td>−10 ± 12</td></tr>
           <tr><td>First version, 64 × 16, 40 ms / 200 ms per move</td><td>3,000 / 400</td><td>+64 ± 13 / +110 ± 35</td></tr>

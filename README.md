@@ -9,14 +9,14 @@ It started as a classic game engine: exact rules, alpha-beta search, and a
 hand-written evaluation tuned by self-play. Then the engine generated 1.5 million
 positions by playing itself, a small neural network learned from them, and in
 3,000 games at equal thinking time **the network beat the hand-tuned evaluation
-it learned from**.
+it learned from**. Then it played itself and got stronger again.
 
 **[Try it in your browser](https://azul.yesil.cc)** · **[Neural vs classic: the benchmark](https://azul.yesil.cc/compare.html)** · [Dev log](https://azul.yesil.cc/blog.html) · [Technical write-up](docs/ML.md)
 
 | Neural network vs hand-tuned evaluation | Result |
 |---|---|
-| Equal thinking time, 40 ms per move | **+112 ± 13 Elo** (66% of points, 3,000 games) |
-| Equal thinking time, 200 ms per move | **+111 ± 36 Elo** (400 games) |
+| Equal thinking time, 40 ms per move | **+148 ± 14 Elo** (70% of points, 3,000 games) |
+| One generation of self-play, against its parent | **+82 ± 13 Elo** (3,000 games) |
 | Equal positions searched | **+141 ± 13 Elo** (3,000 games, 128 × 32 network) |
 
 ![The analysis board with the neural network's top three moves](docs/screenshot.png)
@@ -88,7 +88,8 @@ What made the difference, measured:
 | + the board as if scored now, 128 × 32 | **+141 ± 13** at equal positions |
 | 128 × 32 at equal time, first version | +6 ± 24: knows more, too slow |
 | 64 × 16 at equal time, first version | +64 ± 13 |
-| **64 × 16 at equal time, 3× faster inference** | **+112 ± 13**: the one that ships |
+| 64 × 16 at equal time, 3× faster inference | +112 ± 13 |
+| **+ one generation of self-play** | **+148 ± 14**: the one that ships |
 | Target: search value only / outcome only | −127 / −84 (raw board) |
 
 Go and PyTorch, trained on the same data, reach the same validation error

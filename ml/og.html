@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- The site's social preview image (internal/server/ui/og.png, 1200x630).
+     Render it from the repo root with a headless browser, for example:
+     msedge --headless --allow-file-access-from-files --window-size=1200,630 --screenshot=og.png ml/og.html -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "YS"; src: url(../internal/server/ui/fonts/youngserif-lat.woff2); }
+  @font-face { font-family: "SG"; font-weight: 400 800; src: url(../internal/server/ui/fonts/schibstedgrotesk-lat.woff2); }
+  html, body { margin: 0; }
+  body { width: 1200px; height: 630px; overflow: hidden; position: relative; background: #0f131b; color: #ece6d8; font-family: "SG"; }
+  .wall { position: absolute; inset: 0; background: #8fa9ec; opacity: .07; -webkit-mask: url(../internal/server/ui/azulejo.svg) 0 0 / 64px 64px; }
+  .card { position: absolute; left: 56px; top: 56px; bottom: 56px; width: 640px; background: #161b25; border: 1px solid #283041; border-radius: 22px; padding: 46px 48px; box-sizing: border-box; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo { display: grid; grid-template-columns: 22px 22px; gap: 4px; }
+  .logo i { width: 22px; height: 22px; border-radius: 5px; }
+  .name { font-family: "YS"; font-size: 34px; }
+  .sub { font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: #959baa; font-weight: 650; }
+  h1 { font-family: "YS"; font-weight: 400; font-size: 54px; line-height: 1.05; margin: 40px 0 18px; }
+  p { font-size: 22px; line-height: 1.4; color: #b4b9c4; margin: 0; }
+  .url { position: absolute; left: 48px; bottom: 40px; font-size: 20px; font-weight: 650; }
+  .url b { color: #e08a63; }
+  .art { position: absolute; right: 70px; top: 80px; width: 410px; }
+  .plate { width: 200px; height: 200px; border-radius: 50%; background: #161b25; border: 1px solid #354055; box-shadow: inset 0 0 0 9px #161b25, inset 0 0 0 11px #283041, inset 0 0 0 16px #1e2430, 0 3px 0 #0b0e14; display: grid; grid-template-columns: 62px 62px; gap: 8px; align-content: center; justify-content: center; position: absolute; }
+  .plate.a { left: 0; top: 0; }
+  .plate.b { left: 200px; top: 150px; transform: rotate(8deg); }
+  .t { width: 62px; height: 62px; border-radius: 10px; border: 1px solid rgba(0,0,0,.18); box-shadow: inset 0 -3px 0 rgba(0,0,0,.16), inset 0 2px 0 rgba(255,255,255,.28); }
+  .blue { background: url(../internal/server/ui/t/blue.svg) center/86% no-repeat, #2563c9; }
+  .yellow { background: url(../internal/server/ui/t/yellow.svg) center/86% no-repeat, #e9b50c; }
+  .red { background: url(../internal/server/ui/t/red.svg) center/86% no-repeat, #cf3a2e; }
+  .black { background: url(../internal/server/ui/t/black.svg) center/86% no-repeat, #1a362f; }
+  .white { background: url(../internal/server/ui/t/white.svg) center/86% no-repeat, #f6f4ee; }
+  .loose { position: absolute; }
+  .l1 { left: 236px; top: 20px; transform: rotate(-12deg); }
+  .l2 { left: 40px; top: 250px; transform: rotate(14deg); }
+  .race { position: absolute; right: 70px; bottom: 70px; width: 410px; }
+  .race .bar { display: grid; grid-template-columns: 2088fr 33fr 879fr; gap: 4px; }
+  .race .bar i { height: 14px; border-radius: 4px; }
+  .race .bar .n { background: #5b7fd6; }
+  .race .bar .d { background: #959baa; }
+  .race .bar .c { background: #c96a43; }
+  .race .lbl { display: flex; justify-content: space-between; font-size: 17px; color: #959baa; margin-top: 10px; }
+  .race .lbl b { color: #ece6d8; }
+  .lg i { display: block; }
+  .lg .b1 { background: #2563c9; } .lg .b2 { background: #e9b50c; } .lg .b3 { background: #cf3a2e; } .lg .b4 { background: #f6f4ee; }
+</style>
+</head>
+<body>
+  <div class="wall"></div>
+  <div class="card">
+    <div class="brand">
+      <div class="logo lg"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+      <div><div class="name">Azul Engine</div><div class="sub">Analysis board</div></div>
+    </div>
+    <h1>Find the best move in any Azul position.</h1>
+    <p>A search engine with a neural network brain. Free, in your browser, nothing to install.</p>
+    <div class="url">azul.yesil.cc <b>→</b></div>
+  </div>
+  <div class="art">
+    <div class="plate a"><i class="t blue"></i><i class="t blue"></i><i class="t red"></i><i class="t black"></i></div>
+    <div class="plate b"><i class="t yellow"></i><i class="t white"></i><i class="t black"></i><i class="t yellow"></i></div>
+    <i class="t white loose l1"></i>
+    <i class="t red loose l2"></i>
+  </div>
+  <div class="race">
+    <div class="bar"><i class="n"></i><i class="d"></i><i class="c"></i></div>
+    <div class="lbl"><span><b>Neural network</b> 2,088 wins</span><span><b>Classic</b> 879</span></div>
+  </div>
+</body>
+</html>

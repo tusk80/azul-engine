@@ -110,7 +110,29 @@ azul train -data ml/data.csv -h1 64 -h2 16 -out net.json
 azul selfplay -a-net net.json -b default -pairs 1500 -time 40ms
 ```
 
-The trained 64×16 network ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
+## Self-play
+
+[ml/selfplay-loop.sh](../ml/selfplay-loop.sh) runs generations: the current
+network plays 10,000 games against itself, a new 64×16 network is trained on
+the last two generations' games, and it plays 800 games against its parent and
+800 against the classic engine at 40 ms per move. It takes over only if it
+beats its parent. It ran on a 4-core server; with the faster evaluator a
+generation takes about 40 minutes.
+
+| Generation | vs its parent | vs classic |
+|---|---|---|
+| 0 (trained on the classic engine's games) | | +112 ± 13 (3000 games) |
+| **1** | **+82 ± 13** (3000 games) | **+148 ± 14** (3000 games) |
+| 2 | −2 ± 24 | +107 ± 25 |
+| 3 | −10 ± 24 | +99 ± 25 |
+| 4 | +12 ± 24, then −9 ± 12 over 3000 games | +120 ± 25 |
+
+One generation of learning from its own games was worth +82 Elo; then it
+levelled off. Generation 4 passed the 800-game check by luck and tied
+generation 1 over 3000 games, a reminder of why every adoption is confirmed
+with a long match.
+
+Generation 1 ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
 
 ## Where it is used
 
@@ -121,6 +143,7 @@ results as charts.
 
 ## Next
 
-- Train again on games played by the network itself ([ml/selfplay-loop.sh](../ml/selfplay-loop.sh)).
+- Break the self-play plateau: more games per generation, a lower learning
+  rate when fine-tuning, or more exploration in the games.
 - Update the first layer on each move inside the search (true NNUE), so even
   the feature extraction is incremental.

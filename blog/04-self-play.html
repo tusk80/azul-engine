@@ -1,0 +1,36 @@
+<!--
+title: It taught itself: one generation of self-play
+date: 2026-10-27
+summary: The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.
+tags: Machine learning, Self-play, Go
+-->
+<p>The first network learned from games the classic engine played, so it could only be as good as the positions that engine reached. The next step is the idea behind AlphaZero: let the network play itself, learn from those games, and repeat. Each generation should see better games than the last.</p>
+
+<h2>The loop</h2>
+<p>A shell script, <code>ml/selfplay-loop.sh</code>, runs one generation at a time:</p>
+<ul>
+  <li>The current network plays 10,000 games against itself, searching 20,000 positions a move.</li>
+  <li>A new network trains on the last two generations' games.</li>
+  <li>It plays 800 games against its parent and 800 against the classic engine at equal time, and takes over only if it beats its parent.</li>
+</ul>
+<p>It ran unattended for a few hours on a small 4-core server. Two things made that practical. The <a href="03-nnue-speed.html">faster evaluator</a> cut a generation from over an hour to about 40 minutes. And a status script prints the generations so far, the current stage and a progress line, refreshed every ten seconds over SSH.</p>
+
+<h2>Why a CPU, not a GPU</h2>
+<p>Almost all the time goes into playing games: a tree search that asks the network about one position at a time, 0.7 microseconds each. Shipping a single position to a GPU and back takes longer than computing it. GPUs pay off when a big network sees thousands of positions at once, which is how AlphaZero is built. This engine follows the Stockfish NNUE design instead: a small network, a deep search, all on the CPU. Training itself takes about 20 seconds per generation.</p>
+
+<h2>Results</h2>
+<table class="cmp-table">
+  <thead><tr><th>Generation</th><th>vs its parent</th><th>vs classic</th></tr></thead>
+  <tbody>
+    <tr><td>0 (classic engine's games)</td><td></td><td>+112 ± 13</td></tr>
+    <tr><td><b>1</b></td><td><b>+82 ± 13</b></td><td><b>+148 ± 14</b></td></tr>
+    <tr><td>2</td><td>−2 ± 24</td><td>+107 ± 25</td></tr>
+    <tr><td>3</td><td>−10 ± 24</td><td>+99 ± 25</td></tr>
+    <tr><td>4</td><td>−9 ± 12 (3,000 games)</td><td>+120 ± 25</td></tr>
+  </tbody>
+</table>
+<p>One generation was worth +82 Elo. The network now takes 70% of the points against the hand-tuned engine over 3,000 games, and it is the brain the <a href="/">analysis board</a> uses.</p>
+<p>Then it levelled off. Generation 4 passed its 800-game check with +12 ± 24, which is inside the noise, and over 3,000 games it tied generation 1. That is exactly why every result here is confirmed with a long match before anything ships.</p>
+
+<h2>Next</h2>
+<p>A plateau after one generation usually means the new games are too similar to the old ones. The next experiments: more games per generation, more exploration in the games, and fine-tuning the previous network instead of training each one from scratch.</p>
