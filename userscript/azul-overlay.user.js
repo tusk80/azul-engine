@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Azul engine overlay
 // @namespace    azul-engine
-// @version      0.5.0
-// @description  Shows the local Azul engine's suggested move on buddyboardgames.com and opens any position in the analysis board. Alt+A toggles, Alt+S analyses, Alt+C switches to casual play, Alt+N between the neural and classic engine.
+// @version      0.6.0
+// @description  Shows the Azul engine's suggested move (from azul.exe if it runs, otherwise in the browser) on buddyboardgames.com and opens any position in the analysis board. Alt+A toggles, Alt+S analyses, Alt+C switches to casual play, Alt+N between the neural and classic engine.
 // @match        https://buddyboardgames.com/azul*
 // @homepageURL  https://github.com/tusk80/azul-engine
 // @downloadURL  https://raw.githubusercontent.com/tusk80/azul-engine/main/userscript/azul-overlay.user.js
@@ -11,16 +11,18 @@
 // @grant        unsafeWindow
 // @connect      127.0.0.1
 // @connect      localhost
+// @connect      azul.yesil.cc
 // @run-at       document-idle
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  // The engine on this computer (double-click azul.exe). To use a hosted
-  // engine instead, change this and the @connect lines above; the server
-  // must be started with -cors https://buddyboardgames.com.
+  // The engine on this computer (double-click azul.exe), used when it runs.
+  // Otherwise the engine is loaded from SITE as WebAssembly and runs in a
+  // worker in this tab: about a third as fast, nothing to install.
   const ENGINE_URL = 'http://127.0.0.1:8765/bestmove';
+  const SITE = 'https://azul.yesil.cc/';
   // Where "Analyze this position" opens. The position travels in the link
   // itself (after the #), so it is never sent to a server.
   const ANALYSIS_URL = 'https://azul.yesil.cc/';
@@ -37,6 +39,8 @@
   let result = null; // last engine response for lastKey
   let status = 'waiting for your turn';
   let analysisLink = ''; // link to the current position, on either player's turn
+  let local = true; // try azul.exe first; switch to the browser engine if it is not running
+  let browserEngine = null; // promise of a worker running the WebAssembly engine
 
   // --- state conversion ----------------------------------------------------
 
@@ -95,40 +99,96 @@
   function ask(state, key) {
     status = 'thinking…';
     render();
+    const request = { state, timeMs: THINK_MS, style: casual ? 'casual' : '', engine: neural ? 'neural' : 'classic' };
+    const answer = (code, text) => {
+      if (key !== lastKey) return; // the position moved on meanwhile
+      let body;
+      try {
+        body = JSON.parse(text);
+      } catch (e) {
+        status = 'bad engine response';
+        render();
+        return;
+      }
+      if (code !== 200) {
+        status = 'engine: ' + (body.error || code);
+        result = null;
+      } else {
+        result = body;
+        status = '';
+      }
+      render();
+    };
+    const inBrowser = () => {
+      local = false;
+      status = browserEngine ? 'thinking in the browser…' : 'loading the engine into the browser…';
+      render();
+      askBrowser(request).then((r) => answer(r.status, r.body), (e) => {
+        status = 'engine failed to load: ' + e.message;
+        render();
+      });
+    };
+    if (!local) return inBrowser();
     GM_xmlhttpRequest({
       method: 'POST',
       url: ENGINE_URL,
       headers: { 'Content-Type': 'application/json' },
-      data: JSON.stringify({ state, timeMs: THINK_MS, style: casual ? 'casual' : '', engine: neural ? 'neural' : 'classic' }),
+      data: JSON.stringify(request),
       timeout: THINK_MS + 5000,
-      onload: (res) => {
-        if (key !== lastKey) return; // the position moved on meanwhile
-        let body;
-        try {
-          body = JSON.parse(res.responseText);
-        } catch (e) {
-          status = 'bad engine response';
-          render();
-          return;
-        }
-        if (res.status !== 200) {
-          status = 'engine: ' + (body.error || res.status);
-          result = null;
-        } else {
-          result = body;
-          status = '';
-        }
-        render();
-      },
-      onerror: () => {
-        status = 'engine not reachable — run: azul serve';
-        render();
-      },
+      onload: (res) => answer(res.status, res.responseText),
+      onerror: inBrowser,
       ontimeout: () => {
         status = 'engine timed out';
         render();
       },
     });
+  }
+
+  function download(url, responseType) {
+    return new Promise((resolve, reject) => GM_xmlhttpRequest({
+      method: 'GET',
+      url,
+      responseType,
+      onload: (r) => (r.status === 200 ? resolve(r.response) : reject(new Error(url + ': ' + r.status))),
+      onerror: () => reject(new Error(url + ' unreachable')),
+    }));
+  }
+
+  // askBrowser runs a /bestmove request in a worker holding the site's
+  // WebAssembly engine, loaded on first use.
+  function askBrowser(request) {
+    if (!browserEngine) {
+      browserEngine = Promise.all([download(SITE + 'wasm_exec.js', 'text'), download(SITE + 'engine.wasm', 'arraybuffer')])
+        .then(([execJs, wasm]) => {
+          const code = execJs + `
+            const go = new Go();
+            let ready;
+            onmessage = async (e) => {
+              if (e.data.wasm) {
+                ready = WebAssembly.instantiate(e.data.wasm, go.importObject).then((r) => { go.run(r.instance); });
+                return;
+              }
+              await ready;
+              const r = azulCall('/bestmove', JSON.stringify(e.data.request));
+              postMessage({ id: e.data.id, status: r.status, body: r.body });
+            };`;
+          const worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+          worker.postMessage({ wasm }, [wasm]);
+          const waiting = new Map();
+          let nextId = 1;
+          worker.onmessage = (e) => {
+            waiting.get(e.data.id)(e.data);
+            waiting.delete(e.data.id);
+          };
+          return (req) => new Promise((resolve) => {
+            const id = nextId++;
+            waiting.set(id, resolve);
+            worker.postMessage({ id, request: req });
+          });
+        });
+      browserEngine.catch(() => { browserEngine = null; }); // try again next turn
+    }
+    return browserEngine.then((call) => call(request));
   }
 
   // linkFor encodes a position the way the analysis board's Share links do:
@@ -235,7 +295,7 @@
       body.append(
         el('div', 'move', describe(result.move)),
         // In casual mode the number is the value of your own board, not a lead.
-        el('div', 'eval', casual ? 'casual: best for your own board' : `${neural ? 'neural' : 'classic'} · eval ${evalText} · depth ${result.depth}${result.exact ? ' (exact)' : ''}`),
+        el('div', 'eval', casual ? 'casual: best for your own board' : `${neural ? 'neural' : 'classic'} · eval ${evalText} · depth ${result.depth}${result.exact ? ' (exact)' : ''}${local ? '' : ' · in browser'}`),
         el('div', '', result.reason),
       );
       if (!casual && result.lines && result.lines.length > 1) {

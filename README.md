@@ -142,10 +142,12 @@ ml/.venv/Scripts/python ml/train.py --data ml/data.csv --h1 64 --h2 16 --out net
 
 ## Browser overlay (buddyboardgames.com)
 
-1. Run the engine (`azul`, or double-click `azul.exe`).
-2. Install [Tampermonkey](https://www.tampermonkey.net/), then open
+1. Install [Tampermonkey](https://www.tampermonkey.net/), then open
    [azul-overlay.user.js](https://raw.githubusercontent.com/tusk80/azul-engine/main/userscript/azul-overlay.user.js)
    and press **Install**.
+2. Optional: run the engine on your computer (`azul`, or double-click
+   `azul.exe`). It is about three times faster. Without it the overlay loads
+   the engine from azul.yesil.cc and runs it as WebAssembly in the tab.
 3. In a 2-player game a panel shows the suggested move on your turn.
    **Alt+A** hides it, **Alt+S** opens the position on the board,
    **Alt+N** switches between the neural and classic brain, and **Alt+C**
