@@ -31,6 +31,7 @@ def page(title, description, url, body, up=""):
   <meta property="og:title" content="{e(title)}">
   <meta property="og:description" content="{e(description)}">
   <meta property="og:url" content="{SITE}/{url}">
+  <link rel="canonical" href="{SITE}/{url}">
   <meta property="og:image" content="{SITE}/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="{up}icon.svg" type="image/svg+xml">
@@ -154,6 +155,15 @@ def main():
     if n != 1:
         raise SystemExit("index.html: devlog markers not found")
     index.write_text(text, encoding="utf-8", newline="\n")
+
+    # Unknown paths fall back to index.html, so search engines need the list.
+    newest = posts[0]["date"]
+    pages = [("", newest), ("compare.html", newest), ("blog.html", newest)]
+    pages += [(f"blog/{p['name']}.html", p["date"]) for p in posts]
+    urls = "".join(f"  <url><loc>{SITE}/{u}</loc><lastmod>{d}</lastmod></url>\n" for u, d in pages)
+    (UI / "sitemap.xml").write_text(
+        f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n',
+        encoding="utf-8", newline="\n")
     print(f"built {len(posts)} posts")
 
 
