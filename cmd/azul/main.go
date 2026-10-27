@@ -390,6 +390,7 @@ func cmdTrain(args []string) error {
 	lambda := fs.Float64("lambda", 0.5, "target mix: 1 = search eval only, 0 = final margin only")
 	valFrac := fs.Float64("val", 0.05, "share of rows (the last ones) held out for validation")
 	seed := fs.Uint64("seed", 1, "initialisation and shuffling seed")
+	initPath := fs.String("init", "", "start from this network instead of random weights (fine-tuning; -h1/-h2 are ignored)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -404,8 +405,14 @@ func cmdTrain(args []string) error {
 	}
 	train, val := d.Split(1 - *valFrac)
 	fmt.Printf("%d training and %d validation positions, loaded in %s\n", train.Len(), val.Len(), time.Since(start).Round(time.Millisecond))
-	net := nn.New(*h1, *h2, *seed)
-	net.FitScale(train)
+	net, err := loadNet(*initPath)
+	if err != nil {
+		return err
+	}
+	if net == nil {
+		net = nn.New(*h1, *h2, *seed)
+		net.FitScale(train)
+	} // a fine-tuned network keeps its input scaling: its weights were learned with it
 	r := net.Report(val)
 	fmt.Printf("the data's search values vs final margin: MSE %.2f, pick the winner %.1f%%\n", r.EvalMSE, 100*r.EvalSign)
 	fmt.Println("epoch  train loss  val MSE  winner%  time")

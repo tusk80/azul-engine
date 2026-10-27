@@ -128,6 +128,10 @@ ml/.venv/Scripts/python ml/train.py --data ml/data.csv --h1 64 --h2 16 --out net
 
 - **Play** by clicking tiles, then a pattern line or the floor. *Score round* and
   *Deal next round* at the end of a round, or edit in the real deal.
+- **Play vs engine**: take the side to move and the engine plays the other,
+  scoring and dealing rounds as it goes.
+- **Review game**: every move graded against the engine's choice (best, good,
+  mistake, blunder) with each player's average points lost per move.
 - **Engine**: the top three moves with their points, floor penalties and bonuses.
   **Brain** picks the neural network (default) or the classic evaluation.
 - **Lines**: click a move to step through the line behind it with ◀ ▶.

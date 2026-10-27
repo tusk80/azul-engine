@@ -134,6 +134,17 @@ with a long match.
 
 Generation 1 ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
 
+## What it looks at
+
+[ml/inspect_net.py](../ml/inspect_net.py) runs the network over 105,305
+positions from 2,000 fresh games it never trained on. Its error falls from 16.1
+points RMS in round 1 (it picks the winner 56% of the time) to 11.6 in round 5
+(79%): early uncertainty is mostly the random deals still to come. Permutation
+importance (rise in MSE when a group of inputs is shuffled): the board as if
+scored now 198 and 186 (opponent's, own), walls 53 and 45, scores and floors
+34, pattern lines 34, token and round 2, tiles on the table 1. The search
+handles what happens to the tiles on the table; the network values the boards.
+
 ## Where it is used
 
 The network is the default brain on the analysis board and in the overlay;

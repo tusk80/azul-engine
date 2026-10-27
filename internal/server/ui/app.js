@@ -18,6 +18,8 @@ const ui = {
   reqId: 0,
   pv: null, // {line, positions, step} while stepping through a line
   sel: null, // {src: 0-4 | 'C', color} while choosing a move
+  vs: null, // {human: 0 | 1} while playing against the engine
+  review: null, // {history, done, total, loss: [{loss, worse, mover}]} for the moves played
   edit: false,
   draft: null, // state being edited
   draftErr: '',
@@ -132,7 +134,53 @@ function setPosition(pos, label) {
   ui.pv = null;
   ui.sel = null;
   render();
-  if ($('auto').checked) analyze();
+  if (ui.vs) vsStep();
+  else if ($('auto').checked) analyze();
+}
+
+// ----------------------------------------------------------- play vs engine
+
+// In a game against the engine the human keeps the side that was to move
+// when it started. The engine answers on its turns, rounds are scored and
+// dealt without asking, and the analysis stays hidden.
+function toggleVs() {
+  if (ui.vs) {
+    ui.vs = null;
+  } else {
+    if (ui.edit) toggleEdit();
+    ui.vs = { human: ui.pos.state.toMove };
+    ui.pv = null;
+    ui.analysis = null;
+  }
+  render();
+  if (ui.vs) vsStep();
+  else if ($('auto').checked) analyze();
+}
+
+let vsTimer = 0;
+function vsStep() {
+  clearTimeout(vsTimer);
+  const pos = ui.pos;
+  if (!ui.vs || ui.edit || pos.gameOver) return;
+  if (pos.roundOver) {
+    vsTimer = setTimeout(() => roundAction(pos.action === 'score' ? 'deal' : 'score'), 900);
+    return;
+  }
+  if (pos.state.toMove === ui.vs.human) return;
+  vsTimer = setTimeout(async () => {
+    ui.thinking = true;
+    render();
+    try {
+      const r = await api('/bestmove', { state: pos.state, timeMs: +$('think').value, multiPV: 1, engine: $('engine').value });
+      ui.thinking = false;
+      // The human may have stopped the game or undone moves meanwhile.
+      if (ui.vs && ui.pos === pos) await playMove(r.move.text);
+    } catch (e) {
+      ui.thinking = false;
+      ui.error = e.message;
+      render();
+    }
+  }, 350);
 }
 
 async function newDeal() {
@@ -167,7 +215,9 @@ async function roundAction(action) {
 
 function undo() {
   if (ui.edit || ui.pv) return;
-  const h = ui.history.pop();
+  let h = ui.history.pop();
+  // Against the engine, go back to the human's own turn.
+  while (h && ui.vs && (h.pos.roundOver || h.pos.state.toMove !== ui.vs.human) && ui.history.length) h = ui.history.pop();
   if (!h) return;
   ui.pos = null;
   setPosition(h.pos);
@@ -184,7 +234,7 @@ function jumpTo(i) {
 
 async function analyze() {
   const pos = ui.pos;
-  if (!pos || pos.roundOver || pos.gameOver) return;
+  if (!pos || pos.roundOver || pos.gameOver || ui.vs) return;
   const id = ++ui.reqId;
   ui.thinking = true;
   ui.analysis = null;
@@ -886,6 +936,9 @@ function render() {
   renderPV();
   renderHistory();
   $('btn-undo').disabled = !ui.history.length || ui.edit || !!ui.pv;
+  $('btn-vs').setAttribute('aria-pressed', !!ui.vs);
+  $('btn-vs').textContent = ui.vs ? 'Stop playing' : 'Play vs engine';
+  $('btn-edit').disabled = !!ui.vs;
   $('btn-edit').setAttribute('aria-pressed', ui.edit);
   $('btn-edit').textContent = ui.edit ? 'Done editing' : 'Edit board';
   $('btn-analyze').disabled = ui.edit || ui.pos.roundOver || ui.pos.gameOver;
@@ -1041,7 +1094,7 @@ function renderTable(state) {
 }
 
 function pick(src, color) {
-  if (ui.pos.roundOver) return;
+  if (ui.pos.roundOver || (ui.vs && ui.pos.state.toMove !== ui.vs.human)) return;
   ui.sel = ui.sel && ui.sel.src === src && ui.sel.color === color ? null : { src, color };
   render();
 }
@@ -1142,6 +1195,21 @@ function renderStatus(pos) {
     if (p.action === 'score') st.append(h('span', {}, 'End of round: walls tiled and scored.'));
     return;
   }
+  if (ui.vs && pos.gameOver) {
+    const s = pos.state.players;
+    const me = ui.vs.human;
+    const verdict = pos.winner === -1 ? 'A shared victory' : pos.winner === me ? 'You win' : 'The engine wins';
+    st.append(h('strong', {}, `${verdict}: ${s[me].score} to ${s[1 - me].score}.`), ' ',
+      h('button', { class: 'primary', onclick: () => { newDeal(); } }, 'Play again'), ' ',
+      h('button', { onclick: reviewGame }, 'Review game'));
+    return;
+  }
+  if (ui.vs && !pos.roundOver) {
+    st.append(pos.state.toMove === ui.vs.human
+      ? (ui.sel ? `Place ${ui.sel.color}: click a highlighted line or the floor.` : `You are Player ${ui.vs.human + 1}. Your move: click tiles, then a line.`)
+      : 'The engine is thinking…');
+    return;
+  }
   if (pos.gameOver) {
     const s = pos.state.players;
     const who = pos.winner === -1 ? 'Shared victory' : `Player ${pos.winner + 1} wins`;
@@ -1181,6 +1249,7 @@ function renderAnalysis() {
   box.replaceChildren();
   const pos = ui.pos;
   if (ui.edit) return box.append(h('div', { class: 'meta' }, 'Finish editing to analyse.'));
+  if (ui.vs) return box.append(h('div', { class: 'meta' }, 'Hidden while you play the engine. Stop playing to analyse.'));
   if (pos.gameOver) return box.append(h('div', { class: 'meta' }, 'The game is over.'));
   if (pos.roundOver) return box.append(h('div', { class: 'meta' }, 'The round is over: score it to continue.'));
   if (ui.analysisErr) return box.append(h('div', { class: 'err' }, ui.analysisErr));
@@ -1234,10 +1303,77 @@ function renderPV() {
 function renderHistory() {
   const ol = $('history');
   ol.replaceChildren();
+  const rv = ui.review && ui.review.history === ui.history ? ui.review : null;
   ui.history.forEach((e, i) => {
-    ol.append(h('li', {}, h('button', { onclick: () => jumpTo(i), title: 'Go back to the position before this' }, e.label)));
+    const r = rv && rv.loss[i];
+    ol.append(h('li', {}, h('button', { onclick: () => jumpTo(i), title: 'Go back to the position before this' }, e.label),
+      r ? h('span', { class: `verdict ${verdict(r.loss).cls}`, title: `${r.worse ? 'at least ' : ''}${r.loss.toFixed(1)} points worse than the engine's choice` }, verdict(r.loss).text) : null));
   });
   ol.append(h('li', { class: 'now' }, ui.edit ? 'editing…' : 'current position'));
+
+  const box = $('review');
+  box.replaceChildren();
+  const moves = ui.history.filter((e) => isMove(e.label)).length;
+  if (!rv) {
+    if (moves >= 2 && !ui.edit) box.append(h('button', { onclick: reviewGame, title: 'Score every move against the engine' }, 'Review game'));
+    return;
+  }
+  if (rv.done < rv.total) {
+    box.append(h('span', { class: 'meta' }, `Reviewing… ${rv.done} of ${rv.total} moves`));
+    return;
+  }
+  // Average points lost per move, for each player.
+  for (const p of [0, 1]) {
+    const mine = rv.loss.filter((r) => r && r.mover === p);
+    if (!mine.length) continue;
+    const avg = mine.reduce((a, r) => a + r.loss, 0) / mine.length;
+    const best = mine.filter((r) => r.loss < 0.5).length;
+    box.append(h('span', { class: `rv-player p${p + 1}c` }, `P${p + 1}${ui.vs && ui.vs.human === p ? ' (you)' : ''}: ${avg.toFixed(1)} points lost per move, ${best} of ${mine.length} best`));
+  }
+}
+
+const isMove = (label) => /^(C|F\d) \w+->/.test(label);
+
+// verdict grades the points a move gave away against the engine's choice.
+function verdict(loss) {
+  if (loss < 0.5) return { text: 'best', cls: 'v-best' };
+  if (loss < 2) return { text: 'good', cls: 'v-good' };
+  if (loss < 5) return { text: 'mistake', cls: 'v-mistake' };
+  return { text: 'blunder', cls: 'v-blunder' };
+}
+
+// reviewGame searches every position in the history and compares the move
+// played with the engine's best: the difference in its values is what the
+// move gave away. A move outside the engine's top eight is valued by
+// searching the position it led to.
+async function reviewGame() {
+  const history = ui.history;
+  const steps = history.map((e, i) => (isMove(e.label) ? i : -1)).filter((i) => i >= 0);
+  ui.review = { history, done: 0, total: steps.length, loss: [] };
+  render();
+  for (const i of steps) {
+    if (ui.review.history !== history || ui.history !== history) return; // the game moved on
+    const { pos, label } = history[i];
+    try {
+      const r = await api('/bestmove', { state: pos.state, timeMs: 300, multiPV: 8, engine: $('engine').value });
+      const played = r.lines.find((l) => l.move.text === label);
+      let value = played && played.eval;
+      let worse = false;
+      if (!played) {
+        const next = (history[i + 1] || { pos: ui.pos }).pos;
+        if (next.roundOver) {
+          value = r.lines[r.lines.length - 1].eval; // no search there: at least as bad as the eighth
+          worse = true;
+        } else {
+          const after = await api('/bestmove', { state: next.state, timeMs: 300, multiPV: 1, engine: $('engine').value });
+          value = next.state.toMove === pos.state.toMove ? after.eval : -after.eval;
+        }
+      }
+      ui.review.loss[i] = { loss: Math.max(0, r.lines[0].eval - value), worse, mover: pos.state.toMove };
+    } catch { /* leave this move unmarked */ }
+    ui.review.done++;
+    renderHistory();
+  }
 }
 
 // ------------------------------------------------------------- edit ops
@@ -1288,6 +1424,7 @@ function editFloor(p, k) {
 // --------------------------------------------------------------- wiring
 
 $('btn-new').addEventListener('click', newDeal);
+$('btn-vs').addEventListener('click', toggleVs);
 $('btn-undo').addEventListener('click', undo);
 $('btn-edit').addEventListener('click', toggleEdit);
 $('btn-json').addEventListener('click', openJSON);

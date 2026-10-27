@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What the network looks at · Azul Engine dev log</title>
+  <meta name="description" content="Error by stage of the game and permutation importance on 105,000 positions it never trained on. It leans on the scored-now board and nearly ignores the tiles on the table.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="What the network looks at · Azul Engine dev log">
+  <meta property="og:description" content="Error by stage of the game and permutation importance on 105,000 positions it never trained on. It leans on the scored-now board and nearly ignores the tiles on the table.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog/05-what-it-sees.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="../blog.html">All posts</a>
+      <a class="btn" href="../compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <article class="post">
+      <p class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Model analysis</span><span class="tag">Python</span></p>
+      <h1>What the network looks at</h1>
+      <p class="lede">Error by stage of the game and permutation importance on 105,000 positions it never trained on. It leans on the scored-now board and nearly ignores the tiles on the table.</p>
+      <p>A model that wins games is good. A model you can explain is better. After self-play I took the network that runs on the board, generated 2,000 fresh games it had never trained on (105,305 positions), and asked two questions with a short NumPy script, <code>ml/inspect_net.py</code>: when is it wrong, and what does it actually use?</p>
+
+<h2>When it is wrong</h2>
+<p>The network predicts the final score margin from a single position. Its error, as the root mean square in points, and how often it picks the eventual winner:</p>
+<table class="cmp-table">
+  <thead><tr><th>Round</th><th>Positions</th><th>Error (points)</th><th>Picks the winner</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>22,028</td><td>16.1</td><td>56%</td></tr>
+    <tr><td>2</td><td>22,942</td><td>15.5</td><td>60%</td></tr>
+    <tr><td>3</td><td>22,759</td><td>14.3</td><td>67%</td></tr>
+    <tr><td>4</td><td>22,789</td><td>12.6</td><td>73%</td></tr>
+    <tr><td>5</td><td>12,510</td><td>11.6</td><td>79%</td></tr>
+  </tbody>
+</table>
+<p>Early on it is barely better than a coin flip, and that is mostly not its fault: four or five random deals still lie ahead, and no evaluation can know them. The search's own value, which looks several moves further, is barely better: 14.0 points overall against the network's 14.3 on its own. Within a round the error does not change, early, middle or late. The uncertainty is between rounds, not inside them.</p>
+
+<h2>What it uses</h2>
+<p>Permutation importance: shuffle one group of inputs across all positions, so it carries no information, and measure how much worse the predictions get.</p>
+<table class="cmp-table">
+  <thead><tr><th>Input group</th><th>Inputs</th><th>Rise in error (MSE)</th></tr></thead>
+  <tbody>
+    <tr><td>Opponent's board as if scored now</td><td>26</td><td>198</td></tr>
+    <tr><td>Own board as if scored now</td><td>26</td><td>186</td></tr>
+    <tr><td>Opponent's wall</td><td>25</td><td>53</td></tr>
+    <tr><td>Own wall</td><td>25</td><td>45</td></tr>
+    <tr><td>Scores and floors</td><td>4</td><td>34</td></tr>
+    <tr><td>Pattern lines</td><td>50</td><td>34</td></tr>
+    <tr><td>First-player token and round</td><td>3</td><td>2</td></tr>
+    <tr><td>Tiles still on the table</td><td>11</td><td>1</td></tr>
+  </tbody>
+</table>
+<p>Two findings. The board as it would look if the round were scored now dominates, which explains why adding those inputs was worth 150 Elo in the <a href="02-neural-network.html">first experiment</a>. And the tiles still on the table barely matter to it. That sounds like a flaw, but it is a division of labour: the search plays out what happens to those tiles move by move, so the network can specialise in the long-term value of the boards.</p>
+<p>The opponent's board weighs slightly more than its own, which fits how the game is played: much of Azul is about what you leave for the other player.</p>
+
+<h2>What it suggests</h2>
+<p>The parts of the input the network ignores could be dropped or summarised, making it smaller and faster. The early-game error is a property of the game, so more training will not remove it; better targets for those positions, such as averaging over several possible deals, might.</p>
+    </article>
+    <nav class="post-nav"><a href="03-nnue-speed.html">← Speed is strength: an NNUE-style evaluator in Go</a><a href="04-self-play.html">It taught itself: one generation of self-play →</a></nav>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>
