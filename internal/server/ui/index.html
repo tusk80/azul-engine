@@ -89,30 +89,30 @@
         <span class="kicker">New: a neural network brain</span>
         <div>
           <h3>The engine taught a neural network, and the network beat it.</h3>
-          <p>It learned from 1.5 million positions the engine played against itself, then improved by playing itself. It took 70% of the points in 3,000 games against the hand-tuned engine at equal thinking time.</p>
+          <p>It learned from 1.5 million positions the engine played against itself, then improved by playing itself. It took 73% of the points in 3,000 games against the hand-tuned engine at equal thinking time.</p>
         </div>
         <span class="go">See the results</span>
         <span class="race" aria-hidden="true"><i class="n"></i><i class="d"></i><i class="c"></i></span>
-        <span class="legend-row"><span>Neural network: 2,088 wins</span><span>Classic: 879 wins</span></span>
+        <span class="legend-row"><span>Neural network: 2,175 wins</span><span>Classic: 786 wins</span></span>
       </a>
       <!-- devlog: written by blog/build.py -->
       <section class="devlog" aria-label="Dev log">
         <div class="devlog-head"><h2>From the dev log</h2><a class="btn" href="blog.html">All posts</a></div>
         <div class="devlog-grid">
-        <a class="post-card" href="blog/04-self-play.html">
+        <a class="post-card" href="blog/06-breaking-the-plateau.html">
           <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span></span>
-          <h3>It taught itself: one generation of self-play</h3>
-          <p>The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.</p>
+          <h3>Breaking the plateau, and a trick that did not transfer</h3>
+          <p>Fine-tuning each network from its parent got self-play moving again: +83 Elo over the old brain, +174 over the hand-tuned engine. MTD(f), the biggest search gain in a recent thesis on Azul, measured zero here.</p>
         </a>
         <a class="post-card" href="blog/05-what-it-sees.html">
           <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span></span>
           <h3>What the network looks at</h3>
           <p>Error by stage of the game and permutation importance on 105,000 positions it never trained on. It leans on the scored-now board and nearly ignores the tiles on the table.</p>
         </a>
-        <a class="post-card" href="blog/03-nnue-speed.html">
-          <span class="post-meta"><time datetime="2026-10-15">15 October 2026</time><span class="tag">Performance engineering</span></span>
-          <h3>Speed is strength: an NNUE-style evaluator in Go</h3>
-          <p>Updating only what a move changes, in exact integer arithmetic, made the network three times faster and worth 50 Elo more, with the same weights.</p>
+        <a class="post-card" href="blog/04-self-play.html">
+          <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span></span>
+          <h3>It taught itself: one generation of self-play</h3>
+          <p>The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.</p>
         </a>
         </div>
       </section>
@@ -137,7 +137,7 @@
           <button type="button" class="seg" data-engine="neural" aria-pressed="true"><span class="ml">ML</span>Neural network</button>
           <button type="button" class="seg" data-engine="classic" aria-pressed="false">Classic</button>
         </div>
-        <a class="brain-note" href="compare.html">A machine-learning brain: a neural network trained on 1.5 million self-play positions, <b>+148 Elo</b> over the hand-tuned engine. <span class="go">See the benchmark</span></a>
+        <a class="brain-note" href="compare.html">A machine-learning brain: a neural network trained on 1.5 million self-play positions, <b>+174 Elo</b> over the hand-tuned engine. <span class="go">See the benchmark</span></a>
         <div id="analysis"></div>
       </div>
 

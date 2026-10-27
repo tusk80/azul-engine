@@ -15,8 +15,8 @@ it learned from**. Then it played itself and got stronger again.
 
 | Neural network vs hand-tuned evaluation | Result |
 |---|---|
-| Equal thinking time, 40 ms per move | **+148 ± 14 Elo** (70% of points, 3,000 games) |
-| One generation of self-play, against its parent | **+82 ± 13 Elo** (3,000 games) |
+| Equal thinking time, 40 ms per move | **+174 ± 14 Elo** (73% of points, 3,000 games) |
+| Self-play, against the first network it improved on | **+83 ± 13 Elo** (3,000 games) |
 | Equal positions searched | **+141 ± 13 Elo** (3,000 games, 128 × 32 network) |
 
 ![The analysis board with the neural network's top three moves](docs/screenshot.png)
@@ -91,7 +91,8 @@ What made the difference, measured:
 | 128 × 32 at equal time, first version | +6 ± 24: knows more, too slow |
 | 64 × 16 at equal time, first version | +64 ± 13 |
 | 64 × 16 at equal time, 3× faster inference | +112 ± 13 |
-| **+ one generation of self-play** | **+148 ± 14**: the one that ships |
+| + one generation of self-play | +148 ± 14 |
+| **+ a fine-tuned second self-play run** | **+174 ± 14**: the one that ships |
 | Target: search value only / outcome only | −127 / −84 (raw board) |
 
 Go and PyTorch, trained on the same data, reach the same validation error
@@ -206,6 +207,19 @@ search, an engine pool and per-visitor rate limits.
 - Scores never go below 0.
 - If nobody takes the first-player token, the same player starts the next round.
 - The engine plays to win first, then to maximise the margin.
+
+## Related work
+
+- Mateusz Rzepecki, [*Implementing superhuman AI for Azul board game with a
+  variation of NNUE*](https://jakubkowalski.tech/Supervising/Rzepecki2025ImplementingSuperhuman.pdf),
+  master's thesis, University of Wrocław, 2025. The same recipe in C++:
+  alpha-beta search with a small NNUE-style network, improved by a self-play
+  training loop, and tested against people on Board Game Arena, where it reached
+  first place. Differences here: the network learns the final margin and the
+  search value instead of win/loss only, and the whole engine runs in the browser.
+  Its biggest search gain, MTD(f) at the root, did not carry over here: +9 ± 12
+  at 40 ms and +3 ± 12 at 200 ms per move over 3,000 games each, against this
+  engine's principal variation search.
 
 ## Layout
 

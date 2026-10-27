@@ -78,16 +78,19 @@ def stacked(parts):
     return "\n".join(out)
 
 
-result_bar = stacked([(2088, "neural", "Neural network wins"), (33, "draw", "Shared wins"), (879, "classic", "Classic wins")])
+result_bar = stacked([(2175, "neural", "Neural network wins"), (39, "draw", "Shared wins"), (786, "classic", "Classic wins")])
 
 # Each generation against the classic engine, 40 ms per move. Generation 0 is
 # the network trained on the classic engine's games.
 gen_chart = hbars([
     ("Generation 0", [(112, 13, "know", "trained on the classic engine's games, 3,000 games")]),
-    ("Generation 1", [(148, 14, "neural", "trained on its own games, 3,000 games")]),
+    ("Generation 1", [(148, 14, "know", "trained on its own games, 3,000 games")]),
     ("Generation 2", [(107, 25, "know", "800 games, did not beat its parent")]),
     ("Generation 3", [(99, 25, "know", "800 games, did not beat its parent")]),
     ("Generation 4", [(120, 25, "know", "800 games, tied its parent over 3,000")]),
+    ("Generation 5", [(172, 27, "know", "fine-tuned from generation 1, 800 games")]),
+    ("Generation 6", [(147, 26, "know", "800 games, did not beat its parent")]),
+    ("Generation 7", [(174, 14, "neural", "fine-tuned again, 3,000 games")]),
 ], 0, 200)
 
 speed_chart = hbars([
@@ -118,7 +121,7 @@ html = f"""<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Neural vs Classic — Azul Engine</title>
-  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +148 Elo at equal time.">
+  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +174 Elo at equal time.">
   <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Neural network vs classic: which Azul engine is stronger?">
@@ -160,9 +163,9 @@ html = f"""<!doctype html>
         or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself,
         then from its own games. We had them play each other 3,000 times, with the same thinking time.</p>
       <div class="stats">
-        <div class="stat"><span class="num">+148</span><span class="lbl">Elo at equal thinking time<br><small>± 14, 3,000 games</small></span></div>
-        <div class="stat"><span class="num">70%</span><span class="lbl">of the points won<br><small>2,088 wins, 879 losses</small></span></div>
-        <div class="stat"><span class="num">+8.8</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
+        <div class="stat"><span class="num">+174</span><span class="lbl">Elo at equal thinking time<br><small>± 14, 3,000 games</small></span></div>
+        <div class="stat"><span class="num">73%</span><span class="lbl">of the points won<br><small>2,175 wins, 786 losses</small></span></div>
+        <div class="stat"><span class="num">+9.6</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
         <div class="stat"><span class="num">3.1×</span><span class="lbl">faster search<br><small>than the network's first version</small></span></div>
       </div>
     </section>
@@ -172,9 +175,9 @@ html = f"""<!doctype html>
       <p>Every deal was played twice with the seats swapped, so neither side got the luckier tiles. 40 ms per move.</p>
       {result_bar}
       <ul class="legend">
-        <li><span class="sw neural"></span>Neural network won <b>2,088</b></li>
-        <li><span class="sw draw"></span>Shared <b>33</b></li>
-        <li><span class="sw classic"></span>Classic won <b>879</b></li>
+        <li><span class="sw neural"></span>Neural network won <b>2,175</b></li>
+        <li><span class="sw draw"></span>Shared <b>39</b></li>
+        <li><span class="sw classic"></span>Classic won <b>786</b></li>
       </ul>
     </section>
 
@@ -186,7 +189,7 @@ html = f"""<!doctype html>
 
     <section class="cmp-card">
       <h2>It taught itself</h2>
-      <p>The first network learned from games the classic engine played. Then the network played 10,000 games against itself, a new network learned from them, and it had to beat its parent to take over. One generation of self-play was worth +82 ± 13 Elo over its parent. After that it levelled off: the next three generations could not beat it, so the board uses generation 1. Elo over the classic engine at 40 ms per move.</p>
+      <p>The first network learned from games the classic engine played. Then the network played 10,000 games against itself, a new network learned from them, and it had to beat its parent to take over. One generation of self-play was worth +82 ± 13 Elo over its parent. Then it levelled off: the next three generations could not beat it. A second run broke the plateau by fine-tuning each network from its parent with a smaller step and 20,000 games per generation. Generation 7 beat generation 1 by +83 ± 13 over 3,000 games and is the board's brain. Elo over the classic engine at 40 ms per move.</p>
       {gen_chart}
       <ul class="legend">
         <li><span class="sw neural"></span>The board's brain</li>
@@ -251,7 +254,10 @@ html = f"""<!doctype html>
       <table class="cmp-table">
         <thead><tr><th>Experiment</th><th>Games</th><th>Elo vs classic</th></tr></thead>
         <tbody>
-          <tr><td>Generation 1 (the board's brain), 40 ms per move</td><td>3,000</td><td>+148 ± 14</td></tr>
+          <tr><td>Generation 7 (the board's brain), 40 ms per move</td><td>3,000</td><td>+174 ± 14</td></tr>
+          <tr><td>Generation 7 against generation 1, 40 ms per move</td><td>3,000</td><td>+83 ± 13</td></tr>
+          <tr><td>Generation 5 against generation 1, 40 ms per move</td><td>3,000</td><td>+65 ± 13</td></tr>
+          <tr><td>Generation 1, 40 ms per move</td><td>3,000</td><td>+148 ± 14</td></tr>
           <tr><td>Generation 1 against generation 0, 40 ms per move</td><td>3,000</td><td>+82 ± 13</td></tr>
           <tr><td>Generation 4 against generation 1, 40 ms per move</td><td>3,000</td><td>−9 ± 12</td></tr>
           <tr><td>Generation 0, 40 ms / 200 ms per move</td><td>3,000 / 400</td><td>+112 ± 13 / +111 ± 36</td></tr>

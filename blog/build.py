@@ -92,7 +92,7 @@ def main():
         meta["body"] = m.group(2).strip()
         meta["name"] = path.stem
         posts.append(meta)
-    posts.sort(key=lambda p: p["date"], reverse=True)
+    posts.sort(key=lambda p: (p["date"], p["name"]), reverse=True)
 
     e = html.escape
     out = UI / "blog"

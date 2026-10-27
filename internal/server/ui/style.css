@@ -480,7 +480,7 @@ body.symbols .dot::after { content: none; }
 .promo .go { font-weight: 650; white-space: nowrap; }
 .promo .go::after { content: " \2192"; display: inline-block; transition: transform .25s var(--ease); }
 .promo:hover .go::after { transform: translateX(4px); }
-.promo .race { grid-column: 1 / -1; display: grid; grid-template-columns: 2088fr 33fr 879fr; gap: 3px; margin-top: 8px; }
+.promo .race { grid-column: 1 / -1; display: grid; grid-template-columns: 2175fr 39fr 786fr; gap: 3px; margin-top: 8px; }
 .promo .race i { height: 8px; border-radius: 3px; }
 .promo .race .n { background: var(--c-neural); }
 .promo .race .d { background: var(--muted); }

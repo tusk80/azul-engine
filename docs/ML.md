@@ -132,11 +132,25 @@ levelled off. Generation 4 passed the 800-game check by luck and tied
 generation 1 over 3000 games, a reminder of why every adoption is confirmed
 with a long match.
 
-Generation 1 ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
+A second run (`FINETUNE=1`, 20,000 games per generation) started from
+generation 1 and initialised each new network from its parent's weights, with
+a smaller learning rate (3e-4):
+
+| Generation | vs its parent (800 games) | vs classic |
+|---|---|---|
+| 5 | +53 ± 24; +65 ± 13 against generation 1 over 3000 games | +172 ± 27 |
+| 6 | −4 ± 24 | +147 ± 26 |
+| **7** (parent 5) | +13 ± 24; **+83 ± 13 against generation 1** over 3000 games | **+174 ± 14** (3000 games) |
+
+Fine-tuning broke the plateau: training from random weights each generation
+threw away what the parent knew, and the new data alone was not enough to
+rebuild it.
+
+Generation 7 ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
 
 ## What it looks at
 
-[ml/inspect_net.py](../ml/inspect_net.py) runs the network over 105,305
+[ml/inspect_net.py](../ml/inspect_net.py) runs generation 1 over 105,305
 positions from 2,000 fresh games it never trained on. Its error falls from 16.1
 points RMS in round 1 (it picks the winner 56% of the time) to 11.6 in round 5
 (79%): early uncertainty is mostly the random deals still to come. Permutation
@@ -154,7 +168,5 @@ results as charts.
 
 ## Next
 
-- Break the self-play plateau: more games per generation, a lower learning
-  rate when fine-tuning, or more exploration in the games.
 - Update the first layer on each move inside the search (true NNUE), so even
   the feature extraction is incremental.

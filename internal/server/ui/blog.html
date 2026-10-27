@@ -45,15 +45,20 @@
       <p class="lede">Notes from building an Azul engine: search algorithms, a machine-learning pipeline from self-play data to a trained neural network, and the performance engineering that makes it play well in real time. Every claim comes with a measurement.</p>
     </section>
     <section class="post-list">
-      <a class="post-card" href="blog/04-self-play.html">
-        <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Self-play</span><span class="tag">Go</span></span>
-        <h2>It taught itself: one generation of self-play</h2>
-        <p>The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.</p>
+      <a class="post-card" href="blog/06-breaking-the-plateau.html">
+        <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Self-play</span><span class="tag">Search</span></span>
+        <h2>Breaking the plateau, and a trick that did not transfer</h2>
+        <p>Fine-tuning each network from its parent got self-play moving again: +83 Elo over the old brain, +174 over the hand-tuned engine. MTD(f), the biggest search gain in a recent thesis on Azul, measured zero here.</p>
       </a>
       <a class="post-card" href="blog/05-what-it-sees.html">
         <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Model analysis</span><span class="tag">Python</span></span>
         <h2>What the network looks at</h2>
         <p>Error by stage of the game and permutation importance on 105,000 positions it never trained on. It leans on the scored-now board and nearly ignores the tiles on the table.</p>
+      </a>
+      <a class="post-card" href="blog/04-self-play.html">
+        <span class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Self-play</span><span class="tag">Go</span></span>
+        <h2>It taught itself: one generation of self-play</h2>
+        <p>The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.</p>
       </a>
       <a class="post-card" href="blog/03-nnue-speed.html">
         <span class="post-meta"><time datetime="2026-10-15">15 October 2026</time><span class="tag">Performance engineering</span><span class="tag">Machine learning</span><span class="tag">Go</span></span>
