@@ -173,17 +173,25 @@ func BestMove(eng *search.Searcher, st *game.State, opt search.Options) (*BestMo
 // picks what is best for the mover's own board and ignores the opponent, so
 // it never takes tiles just to deny them or to force floor drops.
 //
-// shortcut: looks one move ahead only, so it can walk into a bad end of
-// round; search with both sides playing for themselves if it should be stronger.
+// It looks casualDepth plies ahead with both sides playing for themselves,
+// so it does not grab every good fit early and then have to dump the
+// leftovers on its floor at the end of the round.
 func Casual(eng *search.Searcher, st *game.State, multiPV int) (*BestMoveResponse, error) {
+	return casual(&eng.Weights, st, multiPV, casualDepth)
+}
+
+const casualDepth = 3
+
+func casual(w *eval.Weights, st *game.State, multiPV, depth int) (*BestMoveResponse, error) {
 	var ml game.MoveList
 	st.GenMoves(&ml)
 	me := int(st.ToMove)
-	res := search.Result{Depth: 1}
+	res := search.Result{Depth: depth}
 	for _, m := range ml.Slice() {
 		c := *st
 		c.Apply(m)
-		res.Lines = append(res.Lines, search.Line{Move: m, Score: eng.Weights.Own(&c, me), PV: []game.Move{m}})
+		v := selfish(w, &c, depth-1)
+		res.Lines = append(res.Lines, search.Line{Move: m, Score: v[me], PV: []game.Move{m}})
 	}
 	sort.SliceStable(res.Lines, func(i, j int) bool { return res.Lines[i].Score > res.Lines[j].Score })
 	res.Lines = res.Lines[:min(len(res.Lines), multiPV)]
@@ -192,6 +200,26 @@ func Casual(eng *search.Searcher, st *game.State, multiPV int) (*BestMoveRespons
 		resp.Engine = "casual"
 	}
 	return resp, err
+}
+
+// selfish returns both players' Own values after depth more plies in which
+// each mover picks what is best for their own board (max^n search).
+func selfish(w *eval.Weights, s *game.State, depth int) [game.NumPlayers]int {
+	if depth <= 0 || s.RoundOver() {
+		return [game.NumPlayers]int{w.Own(s, 0), w.Own(s, 1)}
+	}
+	p := s.ToMove
+	var ml game.MoveList
+	s.GenMoves(&ml)
+	var best [game.NumPlayers]int
+	for i, m := range ml.Slice() {
+		c := *s
+		c.Apply(m)
+		if v := selfish(w, &c, depth-1); i == 0 || v[p] > best[p] {
+			best = v
+		}
+	}
+	return best
 }
 
 func describe(st *game.State, res search.Result) (*BestMoveResponse, error) {
