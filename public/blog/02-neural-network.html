@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teaching a neural network to judge Azul · Azul Engine dev log</title>
+  <meta name="description" content="1.5 million self-play positions, a network trained from scratch in Go and again in PyTorch on a GPU, and the one feature that turned a tie into a win.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Teaching a neural network to judge Azul · Azul Engine dev log">
+  <meta property="og:description" content="1.5 million self-play positions, a network trained from scratch in Go and again in PyTorch on a GPU, and the one feature that turned a tie into a win.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog/02-neural-network.html">
+  <link rel="canonical" href="https://azul.yesil.cc/blog/02-neural-network.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="../blog.html">All posts</a>
+      <a class="btn" href="../compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <article class="post">
+      <p class="post-meta"><time datetime="2026-10-14">14 October 2026</time><span class="tag">Machine learning</span><span class="tag">Neural networks</span><span class="tag">PyTorch</span><span class="tag">Go</span></p>
+      <h1>Teaching a neural network to judge Azul</h1>
+      <p class="lede">1.5 million self-play positions, a network trained from scratch in Go and again in PyTorch on a GPU, and the one feature that turned a tie into a win.</p>
+      <p>The classic engine judges positions with fifteen terms a human chose and self-play tuned. The machine-learning question: can a model learn a better judgement from the engine's own games, with no Azul knowledge written in?</p>
+
+<h2>The data pipeline</h2>
+<p>A new command, <code>azul gendata</code>, plays the engine against itself on every CPU core. 30,000 games gave 1.55 million positions in seven minutes. Each position becomes 170 small integers seen from the side to move: walls, pattern lines, floors, scores and the tiles left on the table. Each carries three labels: the search's value, the final score margin and who won. Five percent of moves are random, so games do not all follow the same habits.</p>
+
+<h2>The model, twice</h2>
+<p>The model is a small multilayer perceptron: 170 inputs, two hidden ReLU layers, one output predicting the final margin in points. I trained it two ways on the same data, split and target:</p>
+<ul>
+  <li><b>From scratch in Go</b>, with no libraries: forward pass, backpropagation, Adam and data-parallel minibatches over CPU cores, about 300 lines. A gradient-check test compares backpropagation against numerical derivatives.</li>
+  <li><b>In PyTorch</b>, on an RTX 5070 with CUDA, as a benchmark and a cross-check.</li>
+</ul>
+<table class="cmp-table">
+  <thead><tr><th></th><th>Go, CPU</th><th>PyTorch, GPU</th></tr></thead>
+  <tbody>
+    <tr><td>Training, 64 × 16 network</td><td>19 s</td><td>24 s</td></tr>
+    <tr><td>Training, 128 × 32 network</td><td>42 s</td><td>22 s</td></tr>
+    <tr><td>Validation error (points²)</td><td>153.0</td><td>153.2</td></tr>
+  </tbody>
+</table>
+<p>The two agree to the decimal, which also proves the hand-written training. For a network this small the GPU does not help: each step is too little work to outweigh moving the batch.</p>
+
+<h2>What the model sees decides everything</h2>
+<p>The first network, given only the raw board, tied the classic engine: −7 ± 34 Elo. Then I added one group of features: the board <em>as it would look if the round were scored now</em>, which the classic evaluation also uses. Same network, same data size: <b>+141 ± 13 Elo</b> at equal positions searched. Feature engineering beat model size.</p>
+<p>The training target mattered too. Learning only the search's opinion, or only who won, both did worse than half and half (−127 and −84 Elo against −7 on the raw board).</p>
+
+<h2>Strength at equal time</h2>
+<p>A network judges better but costs more per position. At 40 ms per move the 64 × 16 network beat the classic engine by +64 ± 13 Elo over 3,000 games, and the bigger 128 × 32 network, though it knew more, was too slow to win at all. Making the network fast became the next problem; see <a href="03-nnue-speed.html">the next post</a>.</p>
+<p>All numbers are reproducible with the commands in the <a href="https://github.com/tusk80/azul-engine/blob/main/docs/ML.md" rel="noopener">technical write-up</a>.</p>
+    </article>
+    <nav class="post-nav"><a href="01-engine.html">← Building a game engine for Azul</a><a href="03-nnue-speed.html">Speed is strength: an NNUE-style evaluator in Go →</a></nav>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>

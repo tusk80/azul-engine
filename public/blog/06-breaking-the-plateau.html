@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Breaking the plateau, and a trick that did not transfer · Azul Engine dev log</title>
+  <meta name="description" content="Fine-tuning each network from its parent got self-play moving again: +83 Elo over the old brain, +174 over the hand-tuned engine. MTD(f), the biggest search gain in a recent thesis on Azul, measured zero here.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Breaking the plateau, and a trick that did not transfer · Azul Engine dev log">
+  <meta property="og:description" content="Fine-tuning each network from its parent got self-play moving again: +83 Elo over the old brain, +174 over the hand-tuned engine. MTD(f), the biggest search gain in a recent thesis on Azul, measured zero here.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog/06-breaking-the-plateau.html">
+  <link rel="canonical" href="https://azul.yesil.cc/blog/06-breaking-the-plateau.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="../blog.html">All posts</a>
+      <a class="btn" href="../compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <article class="post">
+      <p class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Self-play</span><span class="tag">Search</span></p>
+      <h1>Breaking the plateau, and a trick that did not transfer</h1>
+      <p class="lede">Fine-tuning each network from its parent got self-play moving again: +83 Elo over the old brain, +174 over the hand-tuned engine. MTD(f), the biggest search gain in a recent thesis on Azul, measured zero here.</p>
+      <p>The <a href="04-self-play.html">first self-play run</a> stalled after one generation: three new networks in a row could not beat their parent. The guess then was that each generation threw away too much, because every new network started from random weights and had to relearn everything from 10,000 fresh games plus the previous batch.</p>
+
+<h2>Fine-tuning instead of starting over</h2>
+<p>The second run changed three things: each network starts from its parent's weights, the learning rate drops from 1e-3 to 3e-4 so it adjusts instead of rewriting, and each generation plays 20,000 games instead of 10,000. Everything else stayed the same, including the rule that a network takes over only if it beats its parent.</p>
+<table class="cmp-table">
+  <thead><tr><th>Generation</th><th>vs its parent (800 games)</th><th>vs classic</th></tr></thead>
+  <tbody>
+    <tr><td>1 (start)</td><td></td><td>+148 ± 14</td></tr>
+    <tr><td>5</td><td>+53 ± 24</td><td>+172 ± 27</td></tr>
+    <tr><td>6</td><td>−4 ± 24, rejected</td><td>+147 ± 26</td></tr>
+    <tr><td><b>7</b></td><td>+13 ± 24 against generation 5</td><td><b>+174 ± 14</b> (3,000 games)</td></tr>
+  </tbody>
+</table>
+<p>The 800-game checks are noisy, so the two kept networks played generation 1 directly over 3,000 games: generation 5 won by +65 ± 13 and generation 7 by +83 ± 13. Generation 7 is now the brain on the <a href="/">analysis board</a>. Against the hand-tuned engine it takes 73% of the points, up from 70%.</p>
+
+<h2>What a thesis on Azul suggested</h2>
+<p>Mateusz Rzepecki's 2025 master's thesis at the University of Wrocław, <a href="https://jakubkowalski.tech/Supervising/Rzepecki2025ImplementingSuperhuman.pdf" rel="noopener">Implementing superhuman AI for Azul board game with a variation of NNUE</a>, built the same kind of engine in C++ and took it to first place on Board Game Arena. Its self-play loop also flattened out after about a dozen rounds, which matches what happened here.</p>
+<p>Its single biggest search gain was MTD(f): instead of searching the root with a full window, run a series of zero-width searches that close in on the previous iteration's score. In their tests that took 56% of the points against their default. It is a small change, so I tried it: the root became a loop of null-window searches, with a test that it still solves late-round positions exactly like a plain alpha-beta reference.</p>
+<table class="cmp-table">
+  <thead><tr><th>MTD(f) against this engine's root search</th><th>Games</th><th>Elo</th></tr></thead>
+  <tbody>
+    <tr><td>40 ms per move</td><td>3,000</td><td>+9 ± 12</td></tr>
+    <tr><td>200 ms per move</td><td>3,000</td><td>+3 ± 12</td></tr>
+  </tbody>
+</table>
+<p>Nothing. The likely reason is what each one was compared against. Their baseline started every root search with a full window; this engine already uses principal variation search, which tests every move after the first with a zero-width window and re-searches only the ones that beat the best. Most of what MTD(f) saves, PVS was already saving. The change was removed: code that does not win games is not worth keeping.</p>
+
+<h2>Next</h2>
+<p>Keep the fine-tuning loop running while it still finds gains, and look at the deals: early in the game the network's error is mostly the random tiles still to come, so a search that samples the next round's deal more cleverly may matter more than a better evaluation.</p>
+    </article>
+    <nav class="post-nav"><a href="05-what-it-sees.html">← What the network looks at</a><span></span></nav>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>

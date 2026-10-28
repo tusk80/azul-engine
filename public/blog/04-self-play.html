@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>It taught itself: one generation of self-play · Azul Engine dev log</title>
+  <meta name="description" content="The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.">
+  <meta name="theme-color" content="#0f131b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="It taught itself: one generation of self-play · Azul Engine dev log">
+  <meta property="og:description" content="The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.">
+  <meta property="og:url" content="https://azul.yesil.cc/blog/04-self-play.html">
+  <link rel="canonical" href="https://azul.yesil.cc/blog/04-self-play.html">
+  <meta property="og:image" content="https://azul.yesil.cc/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../style.css">
+  <script src="../theme.js"></script>
+</head>
+<body class="cmp">
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Azul Engine home">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="2" y="2" width="13" height="13" rx="3" class="l-blue"/>
+        <rect x="17" y="2" width="13" height="13" rx="3" class="l-yellow"/>
+        <rect x="2" y="17" width="13" height="13" rx="3" class="l-red"/>
+        <rect x="17" y="17" width="13" height="13" rx="3" class="l-white"/>
+      </svg>
+      <span class="brand-text">
+        <span class="brand-name">Azul Engine</span>
+        <span class="brand-sub">Dev log</span>
+      </span>
+    </a>
+    <nav class="actions">
+      <a class="btn" href="../blog.html">All posts</a>
+      <a class="btn" href="../compare.html">Neural vs classic</a>
+      <a class="btn primary" href="/">Open the board</a>
+      <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </nav>
+  </header>
+  <main class="cmp-main post-main">
+    <article class="post">
+      <p class="post-meta"><time datetime="2026-10-27">27 October 2026</time><span class="tag">Machine learning</span><span class="tag">Self-play</span><span class="tag">Go</span></p>
+      <h1>It taught itself: one generation of self-play</h1>
+      <p class="lede">The network played 10,000 games against itself and a new network learned from them: +82 Elo over its parent. Then it levelled off.</p>
+      <p>The first network learned from games the classic engine played, so it could only be as good as the positions that engine reached. The next step is the idea behind AlphaZero: let the network play itself, learn from those games, and repeat. Each generation should see better games than the last.</p>
+
+<h2>The loop</h2>
+<p>A shell script, <code>ml/selfplay-loop.sh</code>, runs one generation at a time:</p>
+<ul>
+  <li>The current network plays 10,000 games against itself, searching 20,000 positions a move.</li>
+  <li>A new network trains on the last two generations' games.</li>
+  <li>It plays 800 games against its parent and 800 against the classic engine at equal time, and takes over only if it beats its parent.</li>
+</ul>
+<p>It ran unattended for a few hours on a small 4-core server. Two things made that practical. The <a href="03-nnue-speed.html">faster evaluator</a> cut a generation from over an hour to about 40 minutes. And a status script prints the generations so far, the current stage and a progress line, refreshed every ten seconds over SSH.</p>
+
+<h2>Why a CPU, not a GPU</h2>
+<p>Almost all the time goes into playing games: a tree search that asks the network about one position at a time, 0.7 microseconds each. Shipping a single position to a GPU and back takes longer than computing it. GPUs pay off when a big network sees thousands of positions at once, which is how AlphaZero is built. This engine follows the Stockfish NNUE design instead: a small network, a deep search, all on the CPU. Training itself takes about 20 seconds per generation.</p>
+
+<h2>Results</h2>
+<table class="cmp-table">
+  <thead><tr><th>Generation</th><th>vs its parent</th><th>vs classic</th></tr></thead>
+  <tbody>
+    <tr><td>0 (classic engine's games)</td><td></td><td>+112 ± 13</td></tr>
+    <tr><td><b>1</b></td><td><b>+82 ± 13</b></td><td><b>+148 ± 14</b></td></tr>
+    <tr><td>2</td><td>−2 ± 24</td><td>+107 ± 25</td></tr>
+    <tr><td>3</td><td>−10 ± 24</td><td>+99 ± 25</td></tr>
+    <tr><td>4</td><td>−9 ± 12 (3,000 games)</td><td>+120 ± 25</td></tr>
+  </tbody>
+</table>
+<p>One generation was worth +82 Elo. The network now takes 70% of the points against the hand-tuned engine over 3,000 games, and it is the brain the <a href="/">analysis board</a> uses.</p>
+<p>Then it levelled off. Generation 4 passed its 800-game check with +12 ± 24, which is inside the noise, and over 3,000 games it tied generation 1. That is exactly why every result here is confirmed with a long match before anything ships.</p>
+
+<h2>Next</h2>
+<p>A plateau after one generation usually means the new games are too similar to the old ones. The next experiments: more games per generation, more exploration in the games, and fine-tuning the previous network instead of training each one from scratch.</p>
+    </article>
+    <nav class="post-nav"><a href="03-nnue-speed.html">← Speed is strength: an NNUE-style evaluator in Go</a><a href="05-what-it-sees.html">What the network looks at →</a></nav>
+  </main>
+  <footer class="foot">
+    <span>Unofficial fan project, not affiliated with the publishers of Azul.</span>
+    <a href="/">Analysis board</a>
+    <a href="https://github.com/tusk80/azul-engine" rel="noopener">Source on GitHub</a>
+  </footer>
+</body>
+</html>
