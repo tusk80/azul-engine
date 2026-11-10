@@ -135,6 +135,9 @@ ml/.venv/Scripts/python ml/train.py --data ml/data.csv --h1 64 --h2 16 --out net
   *Deal next round* at the end of a round, or edit in the real deal.
 - **Play vs engine**: take the side to move and the engine plays the other,
   scoring and dealing rounds as it goes.
+- **Puzzles**: positions from the engine's own games where one move beats every
+  other by at least 3 points, checked by searching the round to its end. The
+  analysis stays hidden until you move; a new puzzle of the day each day.
 - **Review game**: every move graded against the engine's choice (best, good,
   mistake, blunder) with each player's average points lost per move.
 - **Engine**: the top three moves with their points, floor penalties and bonuses.
@@ -172,6 +175,7 @@ Using an engine against people who don't know is cheating.
 | `azul train` | Train a network on that data. |
 | `azul selfplay` | Engine-vs-engine match (`-a-net`, `-b-net` for networks). |
 | `azul tune` | Tune the classic evaluation with SPSA. |
+| `azul puzzles` | Find puzzle positions in self-play games (the board's `puzzles.json`). |
 | `azul show`, `perft`, `random` | Print a board and its moves, count move sequences, play a random game. |
 
 ## HTTP API
@@ -242,6 +246,7 @@ internal/
   eval/        the classic evaluation
   dataset/     features and self-play training data
   nn/          the network: inference, training, the shipped weights
+  puzzle/      finding puzzle positions
   selfplay/    matches and SPSA tuning
   api/         requests and responses, shared by server and browser
   server/      HTTP API and the web pages (server/ui)

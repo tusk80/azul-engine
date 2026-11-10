@@ -537,6 +537,10 @@ body.symbols .dot::after { content: none; }
 .chip { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap; }
 .chip.good { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
 .chip.bad { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+.puzzle #pz-body p { margin: 0 0 10px; }
+.puzzle .pz-ok strong { color: var(--accent); }
+.puzzle .pz-no strong { color: var(--danger); }
+.pz-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .chip.best { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 650; }
 .dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--t-edge); flex: none; }
 .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }

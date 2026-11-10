@@ -19,6 +19,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/tusk80/azul-engine/internal/eval"
 	"github.com/tusk80/azul-engine/internal/game"
 	"github.com/tusk80/azul-engine/internal/nn"
+	"github.com/tusk80/azul-engine/internal/puzzle"
 	"github.com/tusk80/azul-engine/internal/search"
 	"github.com/tusk80/azul-engine/internal/selfplay"
 	"github.com/tusk80/azul-engine/internal/server"
@@ -46,6 +48,8 @@ const usage = `usage:
   (W = "default", "zero", or a weights JSON file)
   azul gendata [-games 1000] [-nodes 20000] [-out data.csv]
                                      self-play positions as training data
+  azul puzzles [-games 300] [-out puzzles.json]
+                                     positions with one clearly best move
   azul train -data data.csv [-epochs 10] [-out net.json]
                                      train a network on that data
   azul selfplay -a-net net.json ...  play a trained network
@@ -80,6 +84,8 @@ func main() {
 		err = cmdTrain(os.Args[2:])
 	case "gendata":
 		err = cmdGendata(os.Args[2:])
+	case "puzzles":
+		err = cmdPuzzles(os.Args[2:])
 	case "tune":
 		err = cmdTune(os.Args[2:])
 	case "serve":
@@ -611,6 +617,60 @@ func cmdGendata(args []string) error {
 	}
 	fmt.Printf("%d positions from %d games in %s -> %s\n", total, *games, time.Since(start).Round(time.Second), *out)
 	return w.Flush()
+}
+
+func cmdPuzzles(args []string) error {
+	fs := flag.NewFlagSet("puzzles", flag.ContinueOnError)
+	games := fs.Int("games", 300, "self-play games to search for puzzles")
+	nodes := fs.Uint64("nodes", 20000, "node budget per move played")
+	check := fs.Uint64("check", 2000000, "node budget to solve a candidate position")
+	seed := fs.Uint64("seed", 1, "first deal seed")
+	workers := fs.Int("workers", runtime.NumCPU(), "parallel games")
+	out := fs.String("out", "puzzles.json", "output file")
+	netPath := fs.String("net", "default", `network that judges the positions ("default" = built in; empty = classic eval)`)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	net, err := loadNet(*netPath)
+	if err != nil {
+		return err
+	}
+	start := time.Now()
+	found := make([][]puzzle.Puzzle, *games)
+	next := make(chan int)
+	var wg sync.WaitGroup
+	for range *workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			eng := search.New(64)
+			if net != nil {
+				eng.Eval = net.Evaluator().Evaluate
+			}
+			for g := range next {
+				eng.Clear()
+				found[g] = puzzle.Game(eng, *seed+uint64(g), *nodes, *check)
+			}
+		}()
+	}
+	for g := range *games {
+		next <- g
+	}
+	close(next)
+	wg.Wait()
+	var all []puzzle.Puzzle
+	for _, p := range found {
+		all = append(all, p...)
+	}
+	data, err := json.Marshal(all)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(*out, data, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("%d puzzles from %d games in %s -> %s\n", len(all), *games, time.Since(start).Round(time.Second), *out)
+	return nil
 }
 
 func formatPV(pv []game.Move) string {

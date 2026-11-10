@@ -20,6 +20,7 @@ const ui = {
   sel: null, // {src: 0-4 | 'C', color} while choosing a move
   vs: null, // {human: 0 | 1} while playing against the engine
   review: null, // {history, done, total, loss: [{loss, worse, mover}]} for the moves played
+  puzzle: null, // {i, start, answered: {text, correct}, tries} while solving a puzzle
   edit: false,
   draft: null, // state being edited
   draftErr: '',
@@ -128,6 +129,7 @@ async function run(fn) {
 
 function setPosition(pos, label) {
   if (ui.pos && label) ui.history.push({ pos: ui.pos, label });
+  gradePuzzle(label);
   ui.pos = pos;
   ui.analysis = null;
   ui.analysisErr = '';
@@ -148,6 +150,7 @@ function toggleVs() {
     ui.vs = null;
   } else {
     if (ui.edit) toggleEdit();
+    leavePuzzle();
     ui.vs = { human: ui.pos.state.toMove };
     ui.pv = null;
     ui.analysis = null;
@@ -186,6 +189,7 @@ function vsStep() {
 async function newDeal() {
   await run(async () => {
     const pos = await api('/new', {});
+    leavePuzzle();
     ui.history = [];
     ui.pos = null;
     setPosition(pos);
@@ -234,7 +238,7 @@ function jumpTo(i) {
 
 async function analyze() {
   const pos = ui.pos;
-  if (!pos || pos.roundOver || pos.gameOver || ui.vs) return;
+  if (!pos || pos.roundOver || pos.gameOver || ui.vs || (ui.puzzle && !ui.puzzle.answered)) return;
   const id = ++ui.reqId;
   ui.thinking = true;
   ui.analysis = null;
@@ -306,6 +310,7 @@ function toggleEdit() {
     if ($('auto').checked) analyze();
     return;
   }
+  leavePuzzle();
   ui.edit = true;
   ui.pv = null;
   ui.sel = null;
@@ -419,9 +424,15 @@ async function share() {
 
 // loadFromHash opens the position in the URL, if there is one.
 async function loadFromHash() {
+  const pz = location.hash.match(/^#puzzle(?:=(\d+))?$/);
+  if (pz) {
+    await startPuzzle(pz[1] ? +pz[1] - 1 : undefined);
+    return !!ui.pos;
+  }
   if (!location.hash.startsWith('#p=')) return false;
   try {
     const r = await api('/apply', { state: decodeState(location.hash.slice(3)), moves: [] });
+    leavePuzzle();
     ui.history = [];
     ui.pos = null;
     ui.edit = false;
@@ -470,6 +481,7 @@ const EXAMPLES = [
 async function loadExample(i) {
   await run(async () => {
     const r = await api('/apply', { state: EXAMPLES[i].state, moves: [] });
+    leavePuzzle();
     if (ui.edit) {
       ui.edit = false;
       ui.draft = null;
@@ -935,6 +947,7 @@ function render() {
   renderAnalysis();
   renderPV();
   renderHistory();
+  renderPuzzle();
   $('btn-undo').disabled = !ui.history.length || ui.edit || !!ui.pv;
   $('btn-vs').setAttribute('aria-pressed', !!ui.vs);
   $('btn-vs').textContent = ui.vs ? 'Stop playing' : 'Play vs engine';
@@ -1250,6 +1263,7 @@ function renderAnalysis() {
   const pos = ui.pos;
   if (ui.edit) return box.append(h('div', { class: 'meta' }, 'Finish editing to analyse.'));
   if (ui.vs) return box.append(h('div', { class: 'meta' }, 'Hidden while you play the engine. Stop playing to analyse.'));
+  if (ui.puzzle && !ui.puzzle.answered) return box.append(h('div', { class: 'meta' }, 'Hidden until you make your move.'));
   if (pos.gameOver) return box.append(h('div', { class: 'meta' }, 'The game is over.'));
   if (pos.roundOver) return box.append(h('div', { class: 'meta' }, 'The round is over: score it to continue.'));
   if (ui.analysisErr) return box.append(h('div', { class: 'err' }, ui.analysisErr));
@@ -1376,6 +1390,116 @@ async function reviewGame() {
   }
 }
 
+// ---------------------------------------------------------------- puzzles
+
+// Puzzles come from the engine's own games (written by `azul puzzles`): it
+// solved the rest of the round, and one move beats every other by at least
+// 3 points. The analysis stays hidden until the player has moved.
+let puzzleList = null;
+
+function puzzlesSolved() {
+  try { return new Set(JSON.parse(store.get('azul.puzzles') || '[]')); } catch { return new Set(); }
+}
+
+async function startPuzzle(i) {
+  await run(async () => {
+    if (!puzzleList) {
+      const r = await fetch('puzzles.json');
+      if (!r.ok) throw new Error('Could not load the puzzles.');
+      puzzleList = await r.json();
+    }
+    const n = puzzleList.length;
+    if (i === undefined) i = Math.floor(Date.now() / 864e5) % n; // the puzzle of the day
+    i = ((i % n) + n) % n;
+    const r = await api('/apply', { state: puzzleList[i].state, moves: [] });
+    ui.vs = null;
+    ui.edit = false;
+    ui.draft = null;
+    ui.history = [];
+    ui.pos = null;
+    ui.puzzle = { i, start: r.positions[0], answered: null, tries: 0 };
+    window.history.replaceState(null, '', `#puzzle=${i + 1}`);
+    setPosition(r.positions[0]);
+  });
+}
+
+function leavePuzzle() {
+  if (!ui.puzzle) return;
+  ui.puzzle = null;
+  if (location.hash.startsWith('#puzzle')) window.history.replaceState(null, '', location.pathname);
+}
+
+// gradePuzzle marks the first move made in a puzzle position.
+function gradePuzzle(label) {
+  const pz = ui.puzzle;
+  if (!pz || pz.answered || !label || !isMove(label)) return;
+  pz.tries++;
+  pz.answered = { text: label, correct: label === puzzleList[pz.i].best };
+  if (pz.answered.correct && pz.tries === 1) {
+    const solved = puzzlesSolved();
+    solved.add(pz.i);
+    store.set('azul.puzzles', JSON.stringify([...solved]));
+  }
+}
+
+function retryPuzzle() {
+  ui.puzzle.answered = null;
+  ui.history = [];
+  ui.pos = null;
+  setPosition(ui.puzzle.start);
+}
+
+async function showSolution() {
+  const p = puzzleList[ui.puzzle.i];
+  ui.history = [];
+  ui.pos = null;
+  setPosition(ui.puzzle.start);
+  await run(async () => {
+    let r = await api('/apply', { state: ui.puzzle.start.state, moves: p.pv });
+    const positions = r.positions;
+    const last = positions[positions.length - 1];
+    if (last.roundOver && !last.gameOver) {
+      r = await api('/apply', { state: last.state, moves: ['score'] });
+      positions.push(r.positions[1]);
+    }
+    ui.pv = { line: -1, positions, step: 0 };
+    ui.sel = null;
+  });
+}
+
+function moveName(text) {
+  const [src, rest] = text.split(' ');
+  const [color, dst] = rest.split('->');
+  return `${src === 'C' ? 'Center' : src} ${color} → ${dst === 'floor' ? 'floor' : 'line ' + dst}`;
+}
+
+function renderPuzzle() {
+  $('btn-puzzle').setAttribute('aria-pressed', !!ui.puzzle);
+  const panel = $('puzzle-panel');
+  panel.hidden = !ui.puzzle;
+  if (!ui.puzzle) return;
+  const { i, answered } = ui.puzzle;
+  const p = puzzleList[i];
+  $('pz-title').textContent = `Puzzle ${i + 1} of ${puzzleList.length}`;
+  const box = $('pz-body');
+  box.replaceChildren();
+  const why = p.wins
+    ? `wins the game; the next best move, ${moveName(p.second)}, does not.`
+    : `is ${p.gain.toFixed(1)} points better than the next best move, ${moveName(p.second)}.`;
+  if (!answered) {
+    box.append(h('p', {}, `Player ${p.state.toMove + 1} to move. One move is clearly best: it is worth at least 3 points more than any other. Play it on the board.`));
+  } else if (answered.correct) {
+    box.append(h('p', { class: 'pz-ok' }, h('strong', {}, 'Correct. '), `${moveName(p.best)} ${why}`));
+  } else {
+    box.append(h('p', { class: 'pz-no' }, h('strong', {}, 'Not this one. '), `The best move, ${moveName(p.best)}, ${why}`));
+  }
+  const btns = h('div', { class: 'pz-actions' });
+  if (answered && !answered.correct) btns.append(h('button', { onclick: retryPuzzle }, 'Try again'));
+  if (answered) btns.append(h('button', { onclick: showSolution }, 'Show the line'));
+  btns.append(h('button', { class: answered ? 'primary' : '', onclick: () => startPuzzle(i + 1) }, 'Next puzzle'));
+  box.append(btns, h('div', { class: 'meta' }, `Solved on the first try: ${puzzlesSolved().size}. Every answer was checked by searching the round to its end.`));
+}
+
 // ------------------------------------------------------------- edit ops
 
 function editFactory(f, k) {
@@ -1425,6 +1549,8 @@ function editFloor(p, k) {
 
 $('btn-new').addEventListener('click', newDeal);
 $('btn-vs').addEventListener('click', toggleVs);
+$('btn-puzzle').addEventListener('click', () => (ui.puzzle ? (leavePuzzle(), render()) : startPuzzle()));
+$('pz-exit').addEventListener('click', () => { leavePuzzle(); render(); });
 $('btn-undo').addEventListener('click', undo);
 $('btn-edit').addEventListener('click', toggleEdit);
 $('btn-json').addEventListener('click', openJSON);

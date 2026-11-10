@@ -34,6 +34,7 @@
     <nav class="actions" aria-label="Board actions">
       <button id="btn-new" title="Deal a fresh game">New game</button>
       <button id="btn-vs" class="primary" aria-pressed="false" title="Play this position against the engine">Play vs engine</button>
+      <button id="btn-puzzle" aria-pressed="false" title="Find the best move in positions from the engine's games">Puzzles</button>
       <select id="examples" aria-label="Load an example position">
         <option value="">Examples…</option>
       </select>
@@ -120,6 +121,14 @@
     </section>
 
     <aside class="side-col" aria-label="Analysis">
+      <div id="puzzle-panel" class="panel puzzle" hidden>
+        <div class="panel-head">
+          <h2 id="pz-title">Puzzle</h2>
+          <button id="pz-exit" title="Leave puzzle mode">Exit</button>
+        </div>
+        <div id="pz-body"></div>
+      </div>
+
       <div class="panel">
         <div class="panel-head">
           <h2>Engine</h2>

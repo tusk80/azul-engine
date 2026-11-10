@@ -92,7 +92,9 @@ work and again at equal thinking time.
 Not everything worked. Valuing the end of a round by **sampling next-round
 deals** and searching each a few moves deep lost 10–50 Elo at equal work in
 every configuration tried, so it is off by default
-([search/lookahead.go](../internal/search/lookahead.go)).
+([search/lookahead.go](../internal/search/lookahead.go)). Retested with the
+neural network (generation 10, 800 games each): 2 or 4 deals at depth 1 or 2,
+at 40 ms and 200 ms per move, gave −3, −20, +7 and +7 ± 24. Still no gain.
 
 ## 5. Checking that it is right
 
