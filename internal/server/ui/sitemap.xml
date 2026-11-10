@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://azul.yesil.cc/</loc><lastmod>2026-10-27</lastmod></url>
-  <url><loc>https://azul.yesil.cc/compare.html</loc><lastmod>2026-10-27</lastmod></url>
-  <url><loc>https://azul.yesil.cc/blog.html</loc><lastmod>2026-10-27</lastmod></url>
+  <url><loc>https://azul.yesil.cc/</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://azul.yesil.cc/compare.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://azul.yesil.cc/blog.html</loc><lastmod>2026-11-10</lastmod></url>
+  <url><loc>https://azul.yesil.cc/blog/07-against-alphazero.html</loc><lastmod>2026-11-10</lastmod></url>
   <url><loc>https://azul.yesil.cc/blog/06-breaking-the-plateau.html</loc><lastmod>2026-10-27</lastmod></url>
   <url><loc>https://azul.yesil.cc/blog/05-what-it-sees.html</loc><lastmod>2026-10-27</lastmod></url>
   <url><loc>https://azul.yesil.cc/blog/04-self-play.html</loc><lastmod>2026-10-27</lastmod></url>

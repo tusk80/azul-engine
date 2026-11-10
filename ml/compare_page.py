@@ -78,7 +78,7 @@ def stacked(parts):
     return "\n".join(out)
 
 
-result_bar = stacked([(2175, "neural", "Neural network wins"), (39, "draw", "Shared wins"), (786, "classic", "Classic wins")])
+result_bar = stacked([(2147, "neural", "Neural network wins"), (20, "draw", "Shared wins"), (833, "classic", "Classic wins")])
 
 # Each generation against the classic engine, 40 ms per move. Generation 0 is
 # the network trained on the classic engine's games.
@@ -90,8 +90,18 @@ gen_chart = hbars([
     ("Generation 4", [(120, 25, "know", "800 games, tied its parent over 3,000")]),
     ("Generation 5", [(172, 27, "know", "fine-tuned from generation 1, 800 games")]),
     ("Generation 6", [(147, 26, "know", "800 games, did not beat its parent")]),
-    ("Generation 7", [(174, 14, "neural", "fine-tuned again, 3,000 games")]),
-], 0, 200)
+    ("Generation 7", [(174, 14, "know", "fine-tuned again, 3,000 games")]),
+    ("Generation 8", [(183, 27, "know", "third run, 800 games")]),
+    ("Generation 9", [(185, 28, "know", "800 games")]),
+    ("Generation 10", [(163, 14, "neural", "beat generation 7 by +38 ± 12, 3,000 games")]),
+], 0, 250)
+
+# Against cestpasphoto/alpha-zero-general's pretrained Azul net, in its own
+# simulator (ml/alphazero_match.py), 200 games each.
+az_chart = hbars([
+    ("100 simulations", [(355, 75, "neural", "AlphaZero 22 ms per move, us 19 ms")]),
+    ("800 simulations", [(258, 62, "neural", "AlphaZero 193 ms per move, us 131 ms")]),
+], 0, 450)
 
 speed_chart = hbars([
     ("First version", [(64, 13, "know", "3,000 games")]),
@@ -121,7 +131,7 @@ html = f"""<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Neural vs Classic — Azul Engine</title>
-  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +174 Elo at equal time.">
+  <meta name="description" content="A neural network trained on 1.5 million self-play positions against a hand-tuned evaluation: 3,000 games, +163 Elo at equal time, and 81% of the points against an open-source AlphaZero.">
   <meta name="theme-color" content="#0f131b">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Neural network vs classic: which Azul engine is stronger?">
@@ -163,9 +173,9 @@ html = f"""<!doctype html>
         or with a <strong>neural network</strong> that learned from 1.5 million positions the engine played against itself,
         then from its own games. We had them play each other 3,000 times, with the same thinking time.</p>
       <div class="stats">
-        <div class="stat"><span class="num">+174</span><span class="lbl">Elo at equal thinking time<br><small>± 14, 3,000 games</small></span></div>
-        <div class="stat"><span class="num">73%</span><span class="lbl">of the points won<br><small>2,175 wins, 786 losses</small></span></div>
-        <div class="stat"><span class="num">+9.6</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
+        <div class="stat"><span class="num">+163</span><span class="lbl">Elo at equal thinking time<br><small>± 14, 3,000 games</small></span></div>
+        <div class="stat"><span class="num">72%</span><span class="lbl">of the points won<br><small>2,147 wins, 833 losses</small></span></div>
+        <div class="stat"><span class="num">+9.1</span><span class="lbl">points per game<br><small>average final margin</small></span></div>
         <div class="stat"><span class="num">3.1×</span><span class="lbl">faster search<br><small>than the network's first version</small></span></div>
       </div>
     </section>
@@ -175,9 +185,9 @@ html = f"""<!doctype html>
       <p>Every deal was played twice with the seats swapped, so neither side got the luckier tiles. 40 ms per move.</p>
       {result_bar}
       <ul class="legend">
-        <li><span class="sw neural"></span>Neural network won <b>2,175</b></li>
-        <li><span class="sw draw"></span>Shared <b>39</b></li>
-        <li><span class="sw classic"></span>Classic won <b>786</b></li>
+        <li><span class="sw neural"></span>Neural network won <b>2,147</b></li>
+        <li><span class="sw draw"></span>Shared <b>20</b></li>
+        <li><span class="sw classic"></span>Classic won <b>833</b></li>
       </ul>
     </section>
 
@@ -189,12 +199,18 @@ html = f"""<!doctype html>
 
     <section class="cmp-card">
       <h2>It taught itself</h2>
-      <p>The first network learned from games the classic engine played. Then the network played 10,000 games against itself, a new network learned from them, and it had to beat its parent to take over. One generation of self-play was worth +82 ± 13 Elo over its parent. Then it levelled off: the next three generations could not beat it. A second run broke the plateau by fine-tuning each network from its parent with a smaller step and 20,000 games per generation. Generation 7 beat generation 1 by +83 ± 13 over 3,000 games and is the board's brain. Elo over the classic engine at 40 ms per move.</p>
+      <p>The first network learned from games the classic engine played. Then the network played 10,000 games against itself, a new network learned from them, and it had to beat its parent to take over. One generation of self-play was worth +82 ± 13 Elo over its parent. Then it levelled off: the next three generations could not beat it. A second run broke the plateau by fine-tuning each network from its parent with a smaller step and 20,000 games per generation. Generation 7 beat generation 1 by +83 ± 13 over 3,000 games. A third run added three more small steps: generation 10 beat generation 7 by +38 ± 12 over 3,000 games and is the board's brain. Against the classic engine the gain has levelled off around +165; the newer networks fix mistakes the classic engine does not punish. Elo over the classic engine at 40 ms per move.</p>
       {gen_chart}
       <ul class="legend">
         <li><span class="sw neural"></span>The board's brain</li>
         <li><span class="sw know"></span>Other generations</li>
       </ul>
+    </section>
+
+    <section class="cmp-card">
+      <h2>Against an independent AlphaZero</h2>
+      <p>Beating its own classic engine says little about strength against anyone else. So the engine played <a href="https://github.com/cestpasphoto/alpha-zero-general" rel="noopener">cestpasphoto/alpha-zero-general</a>, an open-source AlphaZero (Monte Carlo tree search guided by a deep network) with a strong pretrained Azul model, in that project's own game simulator. Every deal was played twice with the seats swapped. At its default 100 simulations per move it took 12% of the points; at 800, thinking longer than this engine, 18.5%. Elo for this engine, 200 games each; lines show the 95% range.</p>
+      {az_chart}
     </section>
 
     <section class="cmp-grid">
@@ -254,7 +270,10 @@ html = f"""<!doctype html>
       <table class="cmp-table">
         <thead><tr><th>Experiment</th><th>Games</th><th>Elo vs classic</th></tr></thead>
         <tbody>
-          <tr><td>Generation 7 (the board's brain), 40 ms per move</td><td>3,000</td><td>+174 ± 14</td></tr>
+          <tr><td>Generation 10 (the board's brain), 40 ms per move</td><td>3,000</td><td>+163 ± 14</td></tr>
+          <tr><td>Generation 10 against generation 7, 40 ms per move</td><td>3,000</td><td>+38 ± 12</td></tr>
+          <tr><td>Against AlphaZero at 100 / 800 simulations per move</td><td>200 / 200</td><td>+355 ± 75 / +258 ± 62</td></tr>
+          <tr><td>Generation 7, 40 ms per move</td><td>3,000</td><td>+174 ± 14</td></tr>
           <tr><td>Generation 7 against generation 1, 40 ms per move</td><td>3,000</td><td>+83 ± 13</td></tr>
           <tr><td>Generation 5 against generation 1, 40 ms per move</td><td>3,000</td><td>+65 ± 13</td></tr>
           <tr><td>Generation 1, 40 ms per move</td><td>3,000</td><td>+148 ± 14</td></tr>

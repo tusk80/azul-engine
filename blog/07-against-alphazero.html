@@ -1,0 +1,28 @@
+<!--
+title: Against an independent AlphaZero
+date: 2026-11-10
+summary: Every number so far was the engine against itself. So it played an open-source AlphaZero for Azul in that project's own simulator: 81.5% of the points even when the AlphaZero thought longer.
+tags: Benchmark, Machine learning, Python
+-->
+<p>Every result on this site so far compares the engine with itself: the network against the classic evaluation, one generation against the last. That shows progress, not strength. A fair question from anyone reading it: strong compared to what?</p>
+
+<h2>The opponent</h2>
+<p><a href="https://github.com/cestpasphoto/alpha-zero-general" rel="noopener">cestpasphoto/alpha-zero-general</a> is an open-source AlphaZero for several board games, with a pretrained 2-player Azul model that its author describes as much stronger than a 700-rated Board Game Arena player. It is a different approach from this engine: Monte Carlo tree search guided by a deep network that outputs both move probabilities and a value, trained only by playing itself.</p>
+
+<h2>A fair setup</h2>
+<p>The games ran in <em>their</em> simulator, so their rules decided every result. Before writing any code I checked that the rules match: the same wall layout, floor penalties, first-player token, end-of-game bonuses and scores that never go below zero. A short Python script, <code>ml/alphazero_match.py</code>, adds this engine as a player. On each turn it converts their board into this engine's JSON position, asks <code>azul serve</code> for a move over HTTP, and maps the answer back to their action number. Their simulator accepts a seed for the tile draws, so every deal was played twice with the seats swapped, the same paired protocol as every other match here.</p>
+<p>The AlphaZero player ran with the settings stored in its own checkpoint. One security detail: their loader unpickles the checkpoint file, which can run code. The checkpoint turned out to load cleanly in PyTorch's weights-only mode, so the script forces that mode.</p>
+
+<h2>Results</h2>
+<table class="cmp-table">
+  <thead><tr><th>AlphaZero simulations per move</th><th>Time per move (it / us)</th><th>Result, 200 games</th><th>Elo for this engine</th></tr></thead>
+  <tbody>
+    <tr><td>100 (its default)</td><td>22 ms / 19 ms</td><td>177–23</td><td>+355 ± 75</td></tr>
+    <tr><td>800</td><td>193 ms / 131 ms</td><td>162–36, 2 shared</td><td>+258 ± 62</td></tr>
+  </tbody>
+</table>
+<p>At equal time the engine took 88.5% of the points and won by 18 points a game on average. Giving the AlphaZero eight times the simulations, and more thinking time than this engine, narrowed the gap but did not close it: 81.5% of the points, +15 points a game.</p>
+<p>A likely reason, not yet tested: Azul rounds are short and every round ends with a fixed scoring step. An alpha-beta search can solve most of a round exactly, which is what this engine does, and then the network only has to judge the position at the round's end. Monte Carlo tree search samples instead of solving, and in a game decided by a few points, exact tactics within the round count.</p>
+
+<h2>Meanwhile, a third self-play run</h2>
+<p>The <a href="06-breaking-the-plateau.html">fine-tuning loop</a> ran three more generations. Each beat its parent by a margin inside the noise of an 800-game check (+12, +18, +7), but over 3,000 games generation 10 beat generation 7 by <b>+38 ± 12</b>, and it is now the board's brain. Against the classic engine it scored +163 ± 14, level with generation 7's +174 ± 14: the newer networks fix mistakes the classic engine does not punish, so that measure has stopped showing the gains. Another reason an outside opponent matters. (The AlphaZero matches used generation 7.)</p>

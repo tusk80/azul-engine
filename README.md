@@ -15,8 +15,9 @@ it learned from**. Then it played itself and got stronger again.
 
 | Neural network vs hand-tuned evaluation | Result |
 |---|---|
-| Equal thinking time, 40 ms per move | **+174 ± 14 Elo** (73% of points, 3,000 games) |
-| Self-play, against the first network it improved on | **+83 ± 13 Elo** (3,000 games) |
+| Equal thinking time, 40 ms per move | **+163 ± 14 Elo** (72% of points, 3,000 games) |
+| Self-play, against the first network it improved on | **+83 ± 13**, then **+38 ± 12** more (3,000 games each) |
+| Against an open-source AlphaZero, 800 simulations per move | **+258 ± 62 Elo** (81.5% of points, 200 games, the AlphaZero thinking longer) |
 | Equal positions searched | **+141 ± 13 Elo** (3,000 games, 128 × 32 network) |
 
 ![The analysis board with the neural network's top three moves](docs/screenshot.png)
@@ -92,7 +93,8 @@ What made the difference, measured:
 | 64 × 16 at equal time, first version | +64 ± 13 |
 | 64 × 16 at equal time, 3× faster inference | +112 ± 13 |
 | + one generation of self-play | +148 ± 14 |
-| **+ a fine-tuned second self-play run** | **+174 ± 14**: the one that ships |
+| + a fine-tuned second self-play run | +174 ± 14 |
+| **+ a third run** | **+163 ± 14**, and +38 ± 12 head to head: the one that ships |
 | Target: search value only / outcome only | −127 / −84 (raw board) |
 
 Go and PyTorch, trained on the same data, reach the same validation error
@@ -209,6 +211,14 @@ search, an engine pool and per-visitor rate limits.
 - The engine plays to win first, then to maximise the margin.
 
 ## Related work
+
+- [cestpasphoto/alpha-zero-general](https://github.com/cestpasphoto/alpha-zero-general):
+  AlphaZero for several board games, with a strong pretrained 2-player Azul
+  model. [ml/alphazero_match.py](ml/alphazero_match.py) plays this engine
+  against it in that project's simulator, each deal twice with the seats
+  swapped: 177–23 at its default 100 simulations per move (+355 ± 75 Elo), and
+  162–36 with 2 shared at 800 simulations, where it used 193 ms per move against
+  this engine's 131 (+258 ± 62).
 
 - Mateusz Rzepecki, [*Implementing superhuman AI for Azul board game with a
   variation of NNUE*](https://jakubkowalski.tech/Supervising/Rzepecki2025ImplementingSuperhuman.pdf),

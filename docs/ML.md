@@ -146,7 +146,32 @@ Fine-tuning broke the plateau: training from random weights each generation
 threw away what the parent knew, and the new data alone was not enough to
 rebuild it.
 
-Generation 7 ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
+A third fine-tuning run from generation 7:
+
+| Generation | vs its parent (800 games) | vs classic |
+|---|---|---|
+| 8 | +12 ± 24 | +183 ± 27 |
+| 9 | +18 ± 24 | +185 ± 28 |
+| **10** | +7 ± 24; **+38 ± 12 against generation 7** over 3000 games | **+163 ± 14** (3000 games) |
+
+Each step was within the noise of an 800-game check, but together they add up
+to a clear gain head to head. Against the classic engine the gain has levelled
+off: the newer networks fix mistakes the classic engine does not punish.
+
+Generation 10 ships inside the engine: [internal/nn/default-net.json](../internal/nn/default-net.json).
+
+## Against an independent AlphaZero
+
+[ml/alphazero_match.py](../ml/alphazero_match.py) plays the engine (with
+generation 7, `azul serve -threads 1`) against the pretrained 2-player Azul model of
+[cestpasphoto/alpha-zero-general](https://github.com/cestpasphoto/alpha-zero-general)
+in that project's own simulator, with its own evaluation settings. Each deal is
+played twice with the seats swapped.
+
+| AlphaZero simulations per move | Time per move (it / us) | Games | Result | Elo for this engine |
+|---|---|---|---|---|
+| 100 (its default) | 22 ms / 19 ms | 200 | 177–23 | +355 ± 75 |
+| 800 | 193 ms / 131 ms | 200 | 162–36, 2 shared | +258 ± 62 |
 
 ## What it looks at
 
