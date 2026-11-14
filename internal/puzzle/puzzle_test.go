@@ -33,6 +33,9 @@ func TestShippedPuzzles(t *testing.T) {
 		if !legal[p.Best] || !legal[p.Second] || p.Best == p.Second {
 			t.Fatalf("puzzle %d: moves %q / %q", i+1, p.Best, p.Second)
 		}
+		if p.Level < 1 || p.Level > len(levelDepths)+1 {
+			t.Fatalf("puzzle %d: level %d", i+1, p.Level)
+		}
 		if len(p.PV) == 0 || p.PV[0] != p.Best {
 			t.Fatalf("puzzle %d: line %v does not start with %q", i+1, p.PV, p.Best)
 		}

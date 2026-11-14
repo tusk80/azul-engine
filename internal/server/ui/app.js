@@ -1480,7 +1480,7 @@ function renderPuzzle() {
   if (!ui.puzzle) return;
   const { i, answered } = ui.puzzle;
   const p = puzzleList[i];
-  $('pz-title').textContent = `Puzzle ${i + 1} of ${puzzleList.length}`;
+  $('pz-title').textContent = `Puzzle ${i + 1} of ${puzzleList.length} · ${['Easy', 'Medium', 'Hard'][p.level - 1] || ''}`;
   const box = $('pz-body');
   box.replaceChildren();
   const why = p.wins

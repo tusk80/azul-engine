@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -628,8 +629,12 @@ func cmdPuzzles(args []string) error {
 	workers := fs.Int("workers", runtime.NumCPU(), "parallel games")
 	out := fs.String("out", "puzzles.json", "output file")
 	netPath := fs.String("net", "default", `network that judges the positions ("default" = built in; empty = classic eval)`)
+	rate := fs.Bool("rate", false, "only (re)rate the puzzles already in -out")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if *rate {
+		return ratePuzzles(*out)
 	}
 	net, err := loadNet(*netPath)
 	if err != nil {
@@ -671,6 +676,34 @@ func cmdPuzzles(args []string) error {
 	}
 	fmt.Printf("%d puzzles from %d games in %s -> %s\n", len(all), *games, time.Since(start).Round(time.Second), *out)
 	return nil
+}
+
+func ratePuzzles(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var all []puzzle.Puzzle
+	if err := json.Unmarshal(data, &all); err != nil {
+		return err
+	}
+	count := map[int]int{}
+	for i := range all {
+		p := &all[i]
+		var ml game.MoveList
+		p.State.GenMoves(&ml)
+		j := slices.IndexFunc(ml.Slice(), func(m game.Move) bool { return m.String() == p.Best })
+		if j < 0 {
+			return fmt.Errorf("puzzle %d: %q is not legal", i+1, p.Best)
+		}
+		p.Level = puzzle.Rate(&p.State, ml.Moves[j])
+		count[p.Level]++
+	}
+	if data, err = json.Marshal(all); err != nil {
+		return err
+	}
+	fmt.Printf("levels 1/2/3: %d/%d/%d -> %s\n", count[1], count[2], count[3], path)
+	return os.WriteFile(path, data, 0o644)
 }
 
 func formatPV(pv []game.Move) string {

@@ -23,6 +23,7 @@ type Puzzle struct {
 	Gain   float64    `json:"gain"`           // points the best move is worth over the second
 	Wins   bool       `json:"wins,omitempty"` // the best move wins the game and the second does not
 	PV     []string   `json:"pv"`             // the best line to the end of the round
+	Level  int        `json:"level"`          // see Rate
 }
 
 // Find checks whether s is a puzzle, searching with eng up to nodes nodes.
@@ -44,7 +45,24 @@ func Find(eng *search.Searcher, s *game.State, nodes uint64) (Puzzle, bool) {
 	for _, m := range a.PV {
 		p.PV = append(p.PV, m.String())
 	}
+	p.Level = Rate(s, a.Move)
 	return p, true
+}
+
+// levelDepths are the search depths of the classic engine that rate a
+// puzzle: Level 1 if the shallowest finds the answer, 2 if the next does,
+// 3 if neither does.
+var levelDepths = [...]int{2, 4}
+
+// Rate returns how hard it is to find best in s: 1 easy, 2 medium, 3 hard.
+func Rate(s *game.State, best game.Move) int {
+	eng := search.New(16)
+	for i, d := range levelDepths {
+		if m, _ := eng.Search(s, search.Options{MaxDepth: d}).Best(); m == best {
+			return i + 1
+		}
+	}
+	return len(levelDepths) + 1
 }
 
 // greedy is the move that is best for the mover's own board right now.

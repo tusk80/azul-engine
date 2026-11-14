@@ -17,7 +17,7 @@ SITE = "https://azul.yesil.cc"
 MONTHS = "January February March April May June July August September October November December".split()
 
 
-def page(title, description, url, body, up=""):
+def page(title, description, url, body, up="", section="Dev log"):
     """A full page; up is the path back to the site root ("" or "../")."""
     e = html.escape
     return f"""<!doctype html>
@@ -51,7 +51,7 @@ def page(title, description, url, body, up=""):
       </svg>
       <span class="brand-text">
         <span class="brand-name">Azul Engine</span>
-        <span class="brand-sub">Dev log</span>
+        <span class="brand-sub">{section}</span>
       </span>
     </a>
     <nav class="actions">
@@ -172,6 +172,9 @@ def main():
     print(f"built {len(posts)} posts")
 
 
+LEVELS = {1: "Easy", 2: "Medium", 3: "Hard"}
+
+
 def puzzles_page():
     """puzzles.html: a crawlable page for the board's puzzle mode."""
     puzzles = json.loads((UI / "puzzles.json").read_text(encoding="utf-8"))
@@ -179,12 +182,15 @@ def puzzles_page():
     wins = sum(1 for p in puzzles if p.get("wins"))
     floor = sum(1 for p in puzzles if p["best"].endswith("floor"))
     cards = []
-    for i, p in enumerate(puzzles[:12]):
+    # Four of each level, in board order, so the sample shows the range.
+    sample = sorted(i for lv in LEVELS for i in [j for j, p in enumerate(puzzles) if p["level"] == lv][:4])
+    for i in sample:
+        p = puzzles[i]
         st = p["state"]
         me, them = st["players"][st["toMove"]]["score"], st["players"][1 - st["toMove"]]["score"]
         stake = "One move wins the game" if p.get("wins") else f"The best move is worth {p['gain']:.1f} points more"
         cards.append(f"""      <a class="post-card" href="/#puzzle={i + 1}">
-        <span class="post-meta"><span class="tag">Round {st['round']}</span><span class="tag">Player {st['toMove'] + 1} to move</span></span>
+        <span class="post-meta"><span class="tag">{LEVELS[p['level']]}</span><span class="tag">Round {st['round']}</span><span class="tag">Player {st['toMove'] + 1} to move</span></span>
         <h2>Puzzle {i + 1}</h2>
         <p>{me} to {them} on the board. {stake}. Find it.</p>
       </a>""")
@@ -206,12 +212,13 @@ def puzzles_page():
     <article class="post">
       <h2>How the puzzles are made</h2>
       <p>The engine's neural network played 200 games against itself. At every turn it searched the position with two candidate lines. A position became a puzzle when three things held: the search reached the end of the round, so nothing was cut short; the best move scored at least 3 points more than the second best; and the best move was not the one a greedy player would pick, the move that looks best for your own board right now.</p>
-      <p>That last rule is what makes them puzzles. The answer is often a quiet move: leaving a colour for the opponent so they have to break a line, taking the first-player token at the right moment, or dropping tiles on the floor now to avoid a bigger penalty later. The code is <code>azul puzzles</code> in the <a href="https://github.com/tusk80/azul-engine" rel="noopener">source on GitHub</a>.</p>
+      <p>Each puzzle is rated by how deep the classic engine has to look to find the answer: <b>easy</b> if it sees it two moves ahead, <b>medium</b> at four, <b>hard</b> if it needs more.</p>
+      <p>The greedy rule is what makes them puzzles. The answer is often a quiet move: leaving a colour for the opponent so they have to break a line, taking the first-player token at the right moment, or dropping tiles on the floor now to avoid a bigger penalty later. The code is <code>azul puzzles</code> in the <a href="https://github.com/tusk80/azul-engine" rel="noopener">source on GitHub</a>.</p>
     </article>"""
     (UI / "puzzles.html").write_text(
         page("Azul puzzles: find the best move · Azul Engine",
              f"{n} Azul puzzles from engine self-play: find the one move that beats every other by at least 3 points. Free, in your browser.",
-             "puzzles.html", body),
+             "puzzles.html", body, section="Puzzles"),
         encoding="utf-8", newline="\n")
 
 
