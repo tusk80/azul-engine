@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://azul.yesil.cc/sitemap.xml
