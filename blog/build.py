@@ -38,6 +38,7 @@ def page(title, description, url, body, up=""):
   <link rel="icon" href="{up}icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="{up}style.css">
   <script src="{up}theme.js"></script>
+  <script src="{up}compare.js" defer></script>
 </head>
 <body class="cmp">
   <header class="topbar">
