@@ -7,6 +7,7 @@ blog/<name>.html), so the engine binary and the static site both serve them.
     python blog/build.py
 """
 import html
+import json
 import pathlib
 import re
 
@@ -54,6 +55,7 @@ def page(title, description, url, body, up=""):
     </a>
     <nav class="actions">
       <a class="btn" href="{up}blog.html">All posts</a>
+      <a class="btn" href="{up}puzzles.html">Puzzles</a>
       <a class="btn" href="{up}compare.html">Neural vs classic</a>
       <a class="btn primary" href="/">Open the board</a>
       <button id="btn-theme" class="icon" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
@@ -156,15 +158,60 @@ def main():
         raise SystemExit("index.html: devlog markers not found")
     index.write_text(text, encoding="utf-8", newline="\n")
 
+    puzzles_page()
+
     # Unknown paths fall back to index.html, so search engines need the list.
     newest = posts[0]["date"]
-    pages = [("", newest), ("compare.html", newest), ("blog.html", newest)]
+    pages = [("", newest), ("compare.html", newest), ("blog.html", newest), ("puzzles.html", newest)]
     pages += [(f"blog/{p['name']}.html", p["date"]) for p in posts]
     urls = "".join(f"  <url><loc>{SITE}/{u}</loc><lastmod>{d}</lastmod></url>\n" for u, d in pages)
     (UI / "sitemap.xml").write_text(
         f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n',
         encoding="utf-8", newline="\n")
     print(f"built {len(posts)} posts")
+
+
+def puzzles_page():
+    """puzzles.html: a crawlable page for the board's puzzle mode."""
+    puzzles = json.loads((UI / "puzzles.json").read_text(encoding="utf-8"))
+    n = len(puzzles)
+    wins = sum(1 for p in puzzles if p.get("wins"))
+    floor = sum(1 for p in puzzles if p["best"].endswith("floor"))
+    cards = []
+    for i, p in enumerate(puzzles[:12]):
+        st = p["state"]
+        me, them = st["players"][st["toMove"]]["score"], st["players"][1 - st["toMove"]]["score"]
+        stake = "One move wins the game" if p.get("wins") else f"The best move is worth {p['gain']:.1f} points more"
+        cards.append(f"""      <a class="post-card" href="/#puzzle={i + 1}">
+        <span class="post-meta"><span class="tag">Round {st['round']}</span><span class="tag">Player {st['toMove'] + 1} to move</span></span>
+        <h2>Puzzle {i + 1}</h2>
+        <p>{me} to {them} on the board. {stake}. Find it.</p>
+      </a>""")
+    items = "\n".join(cards)
+    body = f"""    <section class="cmp-hero">
+      <p class="eyebrow">Puzzles</p>
+      <h1>Azul puzzles: find the best move.</h1>
+      <p class="lede">{n} positions from games the engine played against itself. In each one a single move beats every other by at least 3 points, and the engine checked it by searching the rest of the round. Play your answer on the board: the engine's analysis stays hidden until you move, then it shows why.</p>
+      <p><a class="btn primary" href="/#puzzle">Today's puzzle</a> <a class="btn" href="/#puzzle=1">Start from puzzle 1</a></p>
+      <div class="stats">
+        <div class="stat"><span class="num">{n}</span><span class="lbl">puzzles, a new one each day</span></div>
+        <div class="stat"><span class="num">{wins}</span><span class="lbl">where one move wins the game</span></div>
+        <div class="stat"><span class="num">{floor}</span><span class="lbl">where the best move puts tiles on the floor</span></div>
+      </div>
+    </section>
+    <section class="post-list">
+{items}
+    </section>
+    <article class="post">
+      <h2>How the puzzles are made</h2>
+      <p>The engine's neural network played 200 games against itself. At every turn it searched the position with two candidate lines. A position became a puzzle when three things held: the search reached the end of the round, so nothing was cut short; the best move scored at least 3 points more than the second best; and the best move was not the one a greedy player would pick, the move that looks best for your own board right now.</p>
+      <p>That last rule is what makes them puzzles. The answer is often a quiet move: leaving a colour for the opponent so they have to break a line, taking the first-player token at the right moment, or dropping tiles on the floor now to avoid a bigger penalty later. The code is <code>azul puzzles</code> in the <a href="https://github.com/tusk80/azul-engine" rel="noopener">source on GitHub</a>.</p>
+    </article>"""
+    (UI / "puzzles.html").write_text(
+        page("Azul puzzles: find the best move · Azul Engine",
+             f"{n} Azul puzzles from engine self-play: find the one move that beats every other by at least 3 points. Free, in your browser.",
+             "puzzles.html", body),
+        encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":
